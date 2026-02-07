@@ -1,0 +1,147 @@
+/* ============================================
+   Submission Tracker Styles
+   ============================================ */
+
+.tracker-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ── Workflow Steps ── */
+.workflow-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: var(--space-xl) 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-sm);
+}
+.workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 90px;
+}
+.workflow-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+  position: relative;
+  z-index: 2;
+  transition: all var(--transition-base);
+}
+.workflow-step.completed .workflow-step-dot {
+  background: var(--status-success);
+  border-color: var(--status-success);
+  color: var(--text-inverse);
+}
+.workflow-step.current .workflow-step-dot {
+  background: var(--uwc-navy);
+  border-color: var(--uwc-navy);
+  color: var(--text-inverse);
+  box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.12);
+}
+.workflow-step.referred .workflow-step-dot {
+  background: var(--status-danger);
+  border-color: var(--status-danger);
+  color: var(--text-inverse);
+}
+.workflow-step-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-top: var(--space-sm);
+  max-width: 100px;
+  line-height: 1.3;
+}
+.workflow-step.completed .workflow-step-label {
+  color: var(--status-success);
+}
+.workflow-step.current .workflow-step-label {
+  color: var(--uwc-navy);
+}
+.workflow-step.referred .workflow-step-label {
+  color: var(--status-danger);
+}
+.workflow-step-connector {
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 16px);
+  right: calc(-50% + 16px);
+  height: 2px;
+  background: var(--border-default);
+  z-index: 1;
+}
+.workflow-step.completed .workflow-step-connector {
+  background: var(--status-success);
+}
+
+/* ── Tracker card ── */
+.tracker-request-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  transition: all var(--transition-base);
+}
+.tracker-request-card:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-default);
+}
+.tracker-request-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-sm);
+}
+.tracker-request-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.tracker-request-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.tracker-referred-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px var(--space-md);
+  background: var(--status-error-bg);
+  border-left: 3px solid var(--status-error);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.tracker-referred-note svg {
+  color: var(--status-error);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.workflow-step-date {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
