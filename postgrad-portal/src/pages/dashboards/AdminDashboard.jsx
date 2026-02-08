@@ -118,6 +118,22 @@ export default function AdminDashboard() {
           </CardBody>
         </Card>
 
+        {/* Users by Role - moved up for better visual balance */}
+        <Card>
+          <CardHeader title="Users by Role" icon={<HiOutlineUserGroup />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
+            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/roles')}>Manage <HiOutlineArrowRight /></button>} />
+          <CardBody>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {Object.entries(groupBy(mockUsers, 'role')).map(([role, users]) => (
+                <div key={role} className="committee-stat">
+                  <span className="committee-stat-label">{ROLE_LABELS[role] || role}</span>
+                  <span className="committee-stat-value">{users.length}</span>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+
         {/* Request types */}
         <Card>
           <CardHeader title="Requests by Type" icon={<HiOutlineDocumentText />} iconBg="var(--uwc-gold-pale)" iconColor="var(--uwc-gold)"
@@ -128,22 +144,6 @@ export default function AdminDashboard() {
                 <div key={key} className="committee-stat">
                   <span className="committee-stat-label">{REQUEST_TYPE_LABELS[key] || key}</span>
                   <span className="committee-stat-value">{items.length}</span>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Users by Role */}
-        <Card>
-          <CardHeader title="Users by Role" icon={<HiOutlineUserGroup />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/roles')}>Manage <HiOutlineArrowRight /></button>} />
-          <CardBody>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {Object.entries(groupBy(mockUsers, 'role')).map(([role, users]) => (
-                <div key={role} className="committee-stat">
-                  <span className="committee-stat-label">{ROLE_LABELS[role] || role}</span>
-                  <span className="committee-stat-value">{users.length}</span>
                 </div>
               ))}
             </div>

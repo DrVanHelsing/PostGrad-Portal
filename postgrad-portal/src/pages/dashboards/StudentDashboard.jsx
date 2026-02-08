@@ -138,97 +138,100 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Two column */}
-      <div className="content-grid">
-        {/* Recent Requests */}
-        <Card>
-          <CardHeader title="My Requests" icon={<HiOutlineDocumentText />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>View all <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {requests.length === 0 ? (
-              <EmptyState icon={<HiOutlineDocumentText />} title="No requests yet" description="Submit your first request to get started" />
-            ) : (
-              requests.slice(0, 5).map((r) => (
-                <div key={r.id} className="request-list-item">
-                  <div className="request-list-info">
-                    <div className="request-list-title">{r.title}</div>
-                    <div className="request-list-meta">
-                      <span>{REQUEST_TYPE_LABELS[r.type]}</span>
-                      <span className="request-list-meta-sep" />
-                      <span>{formatRelativeTime(r.updatedAt)}</span>
-                    </div>
-                  </div>
-                  <StatusBadge status={r.status} />
+      {/* Dashboard content – two-column layout */}
+      <div className="student-dashboard-grid">
+        {/* Left column: Profile + Events */}
+        <div className="student-dashboard-col">
+          {profile && (
+            <Card>
+              <CardHeader title="Academic Profile" icon={<HiOutlineAcademicCap />} iconBg="var(--uwc-gold-pale)" iconColor="var(--uwc-gold)"
+                action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/progress')}>Progress <HiOutlineArrowRight /></button>} />
+              <CardBody>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="committee-stat"><span className="committee-stat-label">Programme</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.programme}</span></div>
+                  <div className="committee-stat"><span className="committee-stat-label">Department</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.department}</span></div>
+                  <div className="committee-stat"><span className="committee-stat-label">Registration Date</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{formatDate(profile.registrationDate)}</span></div>
+                  <div className="committee-stat"><span className="committee-stat-label">Years Registered</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.yearsRegistered}</span></div>
+                  <div className="committee-stat"><span className="committee-stat-label">Thesis</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.thesisTitle || '—'}</span></div>
                 </div>
-              ))
-            )}
-          </CardBody>
-        </Card>
+              </CardBody>
+            </Card>
+          )}
 
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader title="Upcoming Events" icon={<HiOutlineCalendarDays />} iconBg="var(--status-warning-bg)" iconColor="var(--status-warning)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>Calendar <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {upcomingEvents.length === 0 ? (
-              <EmptyState icon={<HiOutlineCalendarDays />} title="No upcoming events" />
-            ) : (
-              upcomingEvents.map((evt) => (
-                <div key={evt.id} className="request-list-item">
-                  <div className="request-list-info">
-                    <div className="request-list-title">{evt.title}</div>
-                    <div className="request-list-meta">
-                      <span>{formatDate(evt.date)}</span>
-                      {evt.time && (<><span className="request-list-meta-sep" /><span>{evt.time}</span></>)}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardBody>
-        </Card>
-
-        {/* Milestones with CRUD */}
-        <Card>
-          <CardHeader title="Academic Milestones" icon={<HiOutlineAcademicCap />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
-            action={<button className="btn btn-primary btn-sm" onClick={() => setShowMilestoneModal(true)}><HiOutlinePlusCircle /> Add</button>} />
-          <CardBody>
-            {milestones.length === 0 ? (
-              <EmptyState icon={<HiOutlineAcademicCap />} title="No milestones yet" description="Track your academic progress by adding milestones" />
-            ) : (
-              milestones.map((ms) => (
-                <div key={ms.id} className="timeline-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div className="timeline-dot" style={{ background: 'var(--status-purple)', flexShrink: 0, marginTop: 6 }} />
-                  <div className="timeline-content" style={{ flex: 1 }}>
-                    <div className="timeline-title">{ms.title}</div>
-                    <div className="timeline-desc">{MILESTONE_TYPE_LABELS[ms.type]} – {ms.description}</div>
-                    <div className="timeline-date">{formatDate(ms.date)}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEditMilestone(ms)} title="Edit"><HiOutlinePencilSquare /></button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteMilestone(ms.id)} title="Delete" style={{ color: 'var(--status-danger)' }}><HiOutlineTrash /></button>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardBody>
-        </Card>
-
-        {/* Academic Profile */}
-        {profile && (
           <Card>
-            <CardHeader title="Academic Profile" icon={<HiOutlineAcademicCap />} iconBg="var(--uwc-gold-pale)" iconColor="var(--uwc-gold)" />
-            <CardBody>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="committee-stat"><span className="committee-stat-label">Programme</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.programme}</span></div>
-                <div className="committee-stat"><span className="committee-stat-label">Department</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.department}</span></div>
-                <div className="committee-stat"><span className="committee-stat-label">Registration Date</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{formatDate(profile.registrationDate)}</span></div>
-                <div className="committee-stat"><span className="committee-stat-label">Years Registered</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.yearsRegistered}</span></div>
-                <div className="committee-stat"><span className="committee-stat-label">Thesis</span><span className="committee-stat-value" style={{ fontSize: 13 }}>{profile.thesisTitle || '—'}</span></div>
-              </div>
+            <CardHeader title="Upcoming Events" icon={<HiOutlineCalendarDays />} iconBg="var(--status-warning-bg)" iconColor="var(--status-warning)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>Calendar <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {upcomingEvents.length === 0 ? (
+                <EmptyState icon={<HiOutlineCalendarDays />} title="No upcoming events" />
+              ) : (
+                upcomingEvents.map((evt) => (
+                  <div key={evt.id} className="request-list-item">
+                    <div className="request-list-info">
+                      <div className="request-list-title">{evt.title}</div>
+                      <div className="request-list-meta">
+                        <span>{formatDate(evt.date)}</span>
+                        {evt.time && (<><span className="request-list-meta-sep" /><span>{evt.time}</span></>)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </CardBody>
           </Card>
-        )}
+        </div>
+
+        {/* Right column: Requests + Milestones */}
+        <div className="student-dashboard-col">
+          <Card>
+            <CardHeader title="My Requests" icon={<HiOutlineDocumentText />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>View all <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {requests.length === 0 ? (
+                <EmptyState icon={<HiOutlineDocumentText />} title="No requests yet" description="Submit your first request to get started" />
+              ) : (
+                requests.slice(0, 5).map((r) => (
+                  <div key={r.id} className="request-list-item">
+                    <div className="request-list-info">
+                      <div className="request-list-title">{r.title}</div>
+                      <div className="request-list-meta">
+                        <span>{REQUEST_TYPE_LABELS[r.type]}</span>
+                        <span className="request-list-meta-sep" />
+                        <span>{formatRelativeTime(r.updatedAt)}</span>
+                      </div>
+                    </div>
+                    <StatusBadge status={r.status} />
+                  </div>
+                ))
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Academic Milestones" icon={<HiOutlineAcademicCap />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
+              action={<button className="btn btn-primary btn-sm" onClick={() => setShowMilestoneModal(true)}><HiOutlinePlusCircle /> Add</button>} />
+            <CardBody>
+              {milestones.length === 0 ? (
+                <EmptyState icon={<HiOutlineAcademicCap />} title="No milestones yet" description="Track your academic progress by adding milestones" />
+              ) : (
+                milestones.map((ms) => (
+                  <div key={ms.id} className="timeline-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div className="timeline-dot" style={{ background: 'var(--status-purple)', flexShrink: 0, marginTop: 6 }} />
+                    <div className="timeline-content" style={{ flex: 1 }}>
+                      <div className="timeline-title">{ms.title}</div>
+                      <div className="timeline-desc">{MILESTONE_TYPE_LABELS[ms.type]} – {ms.description}</div>
+                      <div className="timeline-date">{formatDate(ms.date)}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEditMilestone(ms)} title="Edit"><HiOutlinePencilSquare /></button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteMilestone(ms.id)} title="Delete" style={{ color: 'var(--status-danger)' }}><HiOutlineTrash /></button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardBody>
+          </Card>
+        </div>
       </div>
 
       {/* Add Milestone Modal */}

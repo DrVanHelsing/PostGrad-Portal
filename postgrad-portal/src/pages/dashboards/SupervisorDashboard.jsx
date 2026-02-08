@@ -103,7 +103,31 @@ export default function SupervisorDashboard() {
           </CardBody>
         </Card>
 
-        {/* My Students */}
+        {/* Historical Submissions - moved up to reduce gaps */}
+        <Card>
+          <CardHeader title="Historical Submissions" icon={<HiOutlineArrowPath />} iconBg="var(--status-success-bg)" iconColor="var(--status-success)"
+            action={<button className="btn btn-ghost btn-sm" onClick={() => setShowHistorical(true)}>View all <HiOutlineArrowRight /></button>} />
+          <CardBody flush>
+            {historicalRequests.length === 0 ? (
+              <EmptyState icon={<HiOutlineCheckCircle />} title="No completed submissions yet" />
+            ) : (
+              historicalRequests.slice(0, 5).map(r => (
+                <div key={r.id} className="request-list-item">
+                  <div className="request-list-info">
+                    <div className="request-list-title">{r.title}</div>
+                    <div className="request-list-meta">
+                      <span>{r.studentName}</span><span className="request-list-meta-sep" />
+                      <span>{formatDate(r.updatedAt)}</span>
+                    </div>
+                  </div>
+                  <StatusBadge status={r.status} />
+                </div>
+              ))
+            )}
+          </CardBody>
+        </Card>
+
+        {/* My Students - moved down for better visual balance */}
         <Card>
           <CardHeader title="My Students" icon={<HiOutlineAcademicCap />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
             action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/students')}>View all <HiOutlineArrowRight /></button>} />
@@ -138,30 +162,6 @@ export default function SupervisorDashboard() {
                   );
                 })}
               </div>
-            )}
-          </CardBody>
-        </Card>
-
-        {/* Historical Submissions */}
-        <Card>
-          <CardHeader title="Historical Submissions" icon={<HiOutlineArrowPath />} iconBg="var(--status-success-bg)" iconColor="var(--status-success)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => setShowHistorical(true)}>View all <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {historicalRequests.length === 0 ? (
-              <EmptyState icon={<HiOutlineCheckCircle />} title="No completed submissions yet" />
-            ) : (
-              historicalRequests.slice(0, 5).map(r => (
-                <div key={r.id} className="request-list-item">
-                  <div className="request-list-info">
-                    <div className="request-list-title">{r.title}</div>
-                    <div className="request-list-meta">
-                      <span>{r.studentName}</span><span className="request-list-meta-sep" />
-                      <span>{formatDate(r.updatedAt)}</span>
-                    </div>
-                  </div>
-                  <StatusBadge status={r.status} />
-                </div>
-              ))
             )}
           </CardBody>
         </Card>
