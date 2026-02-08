@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: get the current user's Firestore profile ──
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function userRole() {
+      return userDoc().data.role;
+    }
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isAuthenticated() && userRole() == 'admin';
+    }
+    function isCoordinator() {
+      return isAuthenticated() && userRole() == 'coordinator';
+    }
+    function isStaff() {
+      return isAdmin() || isCoordinator();
+    }
+
+    // ── Users collection ──
+    match /users/{userId} {
+      // Anyone authenticated can read (needed for name lookups)
+      allow read: if isAuthenticated();
+      // Users can update their own profile (name, department, notificationPrefs)
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      // Admin can create, update, delete any user
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── HD Requests ──
+    match /hdRequests/{requestId} {
+      // All authenticated users can read (students see their own via app-layer filter)
+      allow read: if isAuthenticated();
+      // Students can create requests
+      allow create: if isAuthenticated();
+      // Updates allowed for authenticated users (workflow transitions validated server-side)
+      allow update: if isAuthenticated();
+      // Only admins can delete requests
+      allow delete: if isAdmin();
+    }
+
+    // ── Calendar Events ──
+    match /calendarEvents/{eventId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // ── Milestones ──
+    match /milestones/{milestoneId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Students can update/delete their own milestones
+      allow update, delete: if isAuthenticated();
+    }
+
+    // ── Notifications ──
+    match /notifications/{notifId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated();
+      // System can create notifications for any user
+      allow create: if isAuthenticated();
+      // Users can mark their notifications as read
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Student Profiles ──
+    match /studentProfiles/{profileId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Audit Logs ──
+    match /auditLogs/{logId} {
+      // Only staff can read audit logs
+      allow read: if isStaff();
+      // System creates audit logs (from authenticated contexts)
+      allow create: if isAuthenticated();
+      // Audit logs are immutable
+      allow update, delete: if false;
+    }
+  }
+}

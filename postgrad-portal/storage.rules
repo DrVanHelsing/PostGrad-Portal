@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /requests/{requestId}/{allPaths=**} {
+      // Authenticated users can read request files
+      allow read: if request.auth != null;
+      // Authenticated users can upload files (max 10MB)
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024;
+    }
+  }
+}

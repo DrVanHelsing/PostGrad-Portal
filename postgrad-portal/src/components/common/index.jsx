@@ -85,12 +85,18 @@ export function Modal({ isOpen, onClose, title, children, footer, large }) {
 
 /* ── Avatar ── */
 export function Avatar({ name, size = 'md', color, bg }) {
+  const isNumeric = typeof size === 'number';
+  const sizeClass = isNumeric ? '' : `avatar-${size}`;
+  const inlineSize = isNumeric
+    ? { width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.38)) }
+    : {};
   return (
     <div
-      className={`avatar avatar-${size}`}
+      className={`avatar ${sizeClass}`}
       style={{
         color: color || 'var(--text-inverse)',
         background: bg || 'var(--uwc-navy)',
+        ...inlineSize,
       }}
     >
       {getInitials(name)}

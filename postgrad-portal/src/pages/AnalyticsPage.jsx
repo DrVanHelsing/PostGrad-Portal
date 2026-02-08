@@ -3,9 +3,8 @@
 // ============================================
 
 import { useMemo } from 'react';
-import { useDataRefresh } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge } from '../components/common';
-import { mockHDRequests, mockStudentProfiles, mockUsers, mockAuditLogs, exportToCSV, downloadCSV } from '../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, ROLE_LABELS } from '../utils/constants';
 import { groupBy, formatDate } from '../utils/helpers';
 import {
@@ -37,7 +36,7 @@ function BarChart({ data, labelKey, valueKey, colorFn }) {
 }
 
 export default function AnalyticsPage() {
-  const tick = useDataRefresh();
+  const { mockHDRequests, mockStudentProfiles, mockUsers, mockAuditLogs, exportToCSV, downloadCSV } = useData();
 
   const byStatus = useMemo(() =>
     Object.entries(groupBy(mockHDRequests, 'status')).map(([k, v]) => ({
@@ -45,28 +44,28 @@ export default function AnalyticsPage() {
       count: v.length,
       color: STATUS_CONFIG[k]?.color || 'var(--uwc-navy)',
     })),
-  [tick]);
+  [mockHDRequests]);
 
   const byType = useMemo(() =>
     Object.entries(groupBy(mockHDRequests, 'type')).map(([k, v]) => ({
       label: REQUEST_TYPE_LABELS[k] || k,
       count: v.length,
     })),
-  [tick]);
+  [mockHDRequests]);
 
   const byRole = useMemo(() =>
     Object.entries(groupBy(mockUsers, 'role')).map(([k, v]) => ({
       label: ROLE_LABELS[k] || k,
       count: v.length,
     })),
-  [tick]);
+  [mockUsers]);
 
   const avgProcessingDays = useMemo(() => {
     const approved = mockHDRequests.filter(r => r.status === 'approved');
     if (!approved.length) return '—';
     const total = approved.reduce((sum, r) => sum + (new Date(r.updatedAt) - new Date(r.createdAt)) / (1000 * 60 * 60 * 24), 0);
     return (total / approved.length).toFixed(1);
-  }, [tick]);
+  }, [mockHDRequests]);
 
   const colors = ['var(--uwc-navy)', 'var(--uwc-gold)', 'var(--status-info)', 'var(--status-success)', 'var(--status-purple)', 'var(--status-warning)', 'var(--status-danger)', 'var(--status-teal)'];
 

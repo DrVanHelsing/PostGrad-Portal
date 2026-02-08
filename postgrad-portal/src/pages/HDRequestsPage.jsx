@@ -2,29 +2,18 @@
 // HD Requests Page – Fully Functional
 // ============================================
 
-import { useState, useMemo, useEffect } from 'react';
-import { useAuth, useDataRefresh } from '../context/AuthContext';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../components/common';
 import SignaturePad from '../components/common/SignaturePad';
-import {
-  mockHDRequests,
-  getRequestsByStudent,
-  getRequestsForSupervisor,
-  getRequestsForCoordinator,
-  getUserById,
-  createHDRequest,
-  submitToSupervisor,
-  validateAccessCode,
-  supervisorApprove,
-  coSupervisorSign,
-  referBack,
-  forwardToFHD,
-  recordFHDOutcome,
-  recordSHDOutcome,
-  resubmitRequest,
-} from '../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
+import { uploadRequestFiles, getFileUrl } from '../firebase/storage';
+import { generateRequestPdf } from '../services/pdfService';
+import { uploadPdfBlob } from '../firebase/storage';
+import { sendRequestSubmittedEmail, sendRequestApprovedEmail, sendReferredBackEmail, sendFinalApprovalEmail, sendNudgeEmail } from '../services/emailService';
 import {
   HiOutlineDocumentText,
   HiOutlineMagnifyingGlass,
@@ -59,7 +48,15 @@ function timerRemaining(request) {
 
 export default function HDRequestsPage() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const navigate = useNavigate();
+  const {
+    mockHDRequests, getRequestsByStudent, getRequestsForSupervisor,
+    getRequestsForCoordinator, getUserById, createHDRequest,
+    submitToSupervisor, validateAccessCode, supervisorApprove,
+    coSupervisorSign, referBack, forwardToFHD, recordFHDOutcome,
+    recordSHDOutcome, resubmitRequest, getStudentProfile,
+    updateRequestDocUrls, updateDraftRequest,
+  } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -79,11 +76,20 @@ export default function HDRequestsPage() {
   const [shdForm, setShdForm] = useState({ outcome: '', reason: '' });
   const [showVersions, setShowVersions] = useState(false);
   const [toast, setToast] = useState(null);
+  const [tick, setTick] = useState(0); // for timer auto-refresh
+  const [showEditDraftModal, setShowEditDraftModal] = useState(false);
+  const [editDraftForm, setEditDraftForm] = useState({ title: '', description: '' });
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  // Timer auto-refresh: force re-render every 60 seconds to update countdown displays
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Refresh selected request from store
   useEffect(() => {
@@ -92,7 +98,7 @@ export default function HDRequestsPage() {
       if (fresh) setSelectedRequest({ ...fresh });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick]);
+  }, [mockHDRequests]);
 
   // Get requests based on role
   const requests = useMemo(() => {
@@ -101,7 +107,7 @@ export default function HDRequestsPage() {
     if (user.role === 'coordinator' || user.role === 'admin') return [...mockHDRequests];
     return mockHDRequests;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, tick]);
+  }, [user, mockHDRequests]);
 
   const filtered = useMemo(() => {
     return requests.filter((r) => {
@@ -118,14 +124,23 @@ export default function HDRequestsPage() {
   const roleLabel = user.role === 'student' ? 'My Requests' : user.role === 'supervisor' ? 'Requests for Review' : 'All Requests';
 
   /* ── ACTION HANDLERS ── */
-  const handleSubmitToSupervisor = () => {
-    submitToSupervisor(selectedRequest.id, user.id);
+  const handleSubmitToSupervisor = async () => {
+    await submitToSupervisor(selectedRequest.id, user.id);
     showToast('Request submitted to supervisor. Access code generated.');
+    // Email: notify supervisor
+    const supervisor = getUserById(selectedRequest.supervisorId);
+    if (supervisor) {
+      sendRequestSubmittedEmail(supervisor.email, supervisor.name, selectedRequest.title, user.name).catch(() => {});
+    }
   };
 
-  const handleResubmit = () => {
-    resubmitRequest(selectedRequest.id, user.id);
+  const handleResubmit = async () => {
+    await resubmitRequest(selectedRequest.id, user.id);
     showToast('Request resubmitted to supervisor.');
+    const supervisor = getUserById(selectedRequest.supervisorId);
+    if (supervisor) {
+      sendRequestSubmittedEmail(supervisor.email, supervisor.name, selectedRequest.title, user.name).catch(() => {});
+    }
   };
 
   const handleValidateAccessCode = () => {
@@ -139,12 +154,17 @@ export default function HDRequestsPage() {
     }
   };
 
-  const handleReferBack = () => {
+  const handleReferBack = async () => {
     if (!referBackReason.trim()) return;
-    referBack(selectedRequest.id, user.id, referBackReason);
+    await referBack(selectedRequest.id, user.id, referBackReason);
     setShowReferBackModal(false);
     setReferBackReason('');
     showToast('Request referred back to student.');
+    // Email: notify student
+    const student = getUserById(selectedRequest.studentId);
+    if (student) {
+      sendReferredBackEmail(student.email, student.name, selectedRequest.title, referBackReason, user.name).catch(() => {});
+    }
   };
 
   const openSignature = (action) => {
@@ -152,35 +172,97 @@ export default function HDRequestsPage() {
     setShowSignatureModal(true);
   };
 
-  const handleSignatureComplete = (sigData) => {
+  const handleSignatureComplete = async (sigData) => {
     setShowSignatureModal(false);
     if (signatureAction === 'supervisorApprove') {
-      supervisorApprove(selectedRequest.id, user.id, sigData.name);
+      await supervisorApprove(selectedRequest.id, user.id, sigData.name);
       showToast('Request approved and forwarded.');
+      // Email: notify student of approval
+      const student = getUserById(selectedRequest.studentId);
+      if (student) {
+        sendRequestApprovedEmail(student.email, student.name, selectedRequest.title, 'Supervisor', user.name).catch(() => {});
+      }
     } else if (signatureAction === 'coSupervisorSign') {
-      coSupervisorSign(selectedRequest.id, user.id, sigData.name);
+      await coSupervisorSign(selectedRequest.id, user.id, sigData.name);
       showToast('Co-supervisor signature applied. Forwarded to coordinator.');
     } else if (signatureAction === 'coordinatorForward') {
-      forwardToFHD(selectedRequest.id, user.id, sigData.name);
+      await forwardToFHD(selectedRequest.id, user.id, sigData.name);
       showToast('Signed and forwarded to the Faculty Board.');
     }
     setSignatureAction(null);
   };
 
-  const handleFHDOutcome = () => {
+  const handleFHDOutcome = async () => {
     if (!fhdForm.outcome) return;
-    recordFHDOutcome(selectedRequest.id, user.id, fhdForm.outcome, fhdForm.referenceNumber, fhdForm.reason);
+    await recordFHDOutcome(selectedRequest.id, user.id, fhdForm.outcome, fhdForm.referenceNumber, fhdForm.reason);
     setShowFHDOutcomeModal(false);
     setFhdForm({ outcome: '', referenceNumber: '', reason: '' });
     showToast(`Faculty Board outcome recorded: ${fhdForm.outcome}`);
   };
 
-  const handleSHDOutcome = () => {
+  const handleSHDOutcome = async () => {
     if (!shdForm.outcome) return;
-    recordSHDOutcome(selectedRequest.id, user.id, shdForm.outcome, shdForm.reason);
+    await recordSHDOutcome(selectedRequest.id, user.id, shdForm.outcome, shdForm.reason);
     setShowSHDOutcomeModal(false);
+
+    if (shdForm.outcome === 'approved') {
+      // Generate and upload final PDF
+      try {
+        showToast('Generating final PDF...');
+        const studentProfile = getStudentProfile(selectedRequest.studentId);
+        const freshReq = mockHDRequests.find(r => r.id === selectedRequest.id) || selectedRequest;
+        const pdfBlob = await generateRequestPdf(freshReq, { getUserById, studentProfile });
+        const pdfPath = `requests/${selectedRequest.id}/final_approved.pdf`;
+        const pdfUrl = await uploadPdfBlob(pdfBlob, pdfPath);
+        await updateRequestDocUrls(selectedRequest.id, { finalPdfUrl: pdfUrl });
+        showToast('Request fully approved — PDF generated.');
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        showToast('Approved but PDF generation failed', 'error');
+      }
+      // Email: notify student of final approval
+      const student = getUserById(selectedRequest.studentId);
+      if (student) {
+        sendFinalApprovalEmail(student.email, student.name, selectedRequest.title).catch(() => {});
+      }
+    } else {
+      showToast(`Senate Board outcome recorded: ${shdForm.outcome}`);
+    }
     setShdForm({ outcome: '', reason: '' });
-    showToast(`Senate Board outcome recorded: ${shdForm.outcome}`);
+  };
+
+  const handleDownloadPdf = async (url) => {
+    try {
+      // If it's a Firebase Storage path/url, open it directly
+      if (url.startsWith('http')) {
+        window.open(url, '_blank');
+      } else {
+        const downloadUrl = await getFileUrl(url);
+        window.open(downloadUrl, '_blank');
+      }
+    } catch (err) {
+      showToast('Failed to download PDF', 'error');
+    }
+  };
+
+  const openEditDraft = () => {
+    if (!selectedRequest) return;
+    setEditDraftForm({ title: selectedRequest.title || '', description: selectedRequest.description || '' });
+    setShowEditDraftModal(true);
+  };
+
+  const handleSaveEditDraft = async () => {
+    if (!editDraftForm.title.trim()) return;
+    try {
+      await updateDraftRequest(selectedRequest.id, {
+        title: editDraftForm.title.trim(),
+        description: editDraftForm.description.trim(),
+      });
+      setShowEditDraftModal(false);
+      showToast('Draft updated.');
+    } catch (err) {
+      showToast(err.message || 'Failed to update draft', 'error');
+    }
   };
 
   return (
@@ -311,6 +393,7 @@ export default function HDRequestsPage() {
             onCoordinatorForward={() => openSignature('coordinatorForward')}
             onRecordFHD={() => { setFhdForm({ outcome: '', referenceNumber: '', reason: '' }); setShowFHDOutcomeModal(true); }}
             onRecordSHD={() => { setShdForm({ outcome: '', reason: '' }); setShowSHDOutcomeModal(true); }}
+            onEditDraft={openEditDraft}
           />
         )}
       >
@@ -405,6 +488,17 @@ export default function HDRequestsPage() {
               </div>
             )}
 
+            {/* Review Documents & Version Control button */}
+            <div className="request-detail-section" style={{ marginTop: 'var(--space-lg)' }}>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onClick={() => { setSelectedRequest(null); navigate(`/requests/${selectedRequest.id}/review`); }}
+              >
+                <HiOutlineClipboardDocumentList /> Review Documents & Version History
+              </button>
+            </div>
+
             {/* Supervisor/Coordinator review file upload */}
             {((user.role === 'supervisor' && ['supervisor_review'].includes(selectedRequest.status))
               || (user.role === 'coordinator' && selectedRequest.status === 'coordinator_review')) && (
@@ -461,8 +555,7 @@ export default function HDRequestsPage() {
               <div className="request-detail-section" style={{ marginTop: 'var(--space-xl)' }}>
                 <div className="request-detail-label">Final Documents</div>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
-                  {selectedRequest.finalPdfUrl && <button className="btn btn-secondary btn-sm" onClick={() => showToast('PDF download simulated (mock)')}>Download PDF</button>}
-                  {selectedRequest.googleDriveUrl && <button className="btn btn-secondary btn-sm" onClick={() => showToast('Google Drive link simulated (mock)')}>View on Google Drive</button>}
+                  {selectedRequest.finalPdfUrl && <button className="btn btn-secondary btn-sm" onClick={() => handleDownloadPdf(selectedRequest.finalPdfUrl)}>Download PDF</button>}
                 </div>
               </div>
             )}
@@ -582,6 +675,25 @@ export default function HDRequestsPage() {
         )}
       </Modal>
 
+      {/* ── Edit Draft Modal ── */}
+      <Modal isOpen={showEditDraftModal} onClose={() => setShowEditDraftModal(false)} title="Edit Draft Request"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowEditDraftModal(false)}>Cancel</button>
+            <button className="btn btn-primary" disabled={!editDraftForm.title.trim()} onClick={handleSaveEditDraft}>Save Changes</button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">Title</label>
+          <input className="form-input" value={editDraftForm.title} onChange={(e) => setEditDraftForm({ ...editDraftForm, title: e.target.value })} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Description</label>
+          <textarea className="form-textarea" rows={4} value={editDraftForm.description} onChange={(e) => setEditDraftForm({ ...editDraftForm, description: e.target.value })} />
+        </div>
+      </Modal>
+
       {/* ── New Request Modal ── */}
       <NewRequestModal isOpen={showNewRequestModal} onClose={() => setShowNewRequestModal(false)} user={user} onCreated={(r) => showToast(`Request "${r.title}" created.`)} />
     </div>
@@ -599,14 +711,17 @@ function DetailField({ label, value }) {
 }
 
 /* ── Request action buttons ── */
-function RequestModalActions({ request, userRole, userId, onClose, onSubmit, onResubmit, onReferBack, onSignApprove, onCoSign, onCoordinatorForward, onRecordFHD, onRecordSHD }) {
+function RequestModalActions({ request, userRole, userId, onClose, onSubmit, onResubmit, onReferBack, onSignApprove, onCoSign, onCoordinatorForward, onRecordFHD, onRecordSHD, onEditDraft }) {
   if (!request) return null;
 
-  // Student: draft → submit
+  // Student: draft → edit & submit
   if (userRole === 'student' && request.status === 'draft') {
     return (
       <>
         <button className="btn btn-secondary" onClick={onClose}>Close</button>
+        <button className="btn btn-ghost" onClick={onEditDraft}>
+          <HiOutlinePencilSquare /> Edit
+        </button>
         <button className="btn btn-primary" onClick={onSubmit}>
           <HiOutlinePaperAirplane /> Submit to Supervisor
         </button>
@@ -728,10 +843,12 @@ function FileUploadZone({ files, onChange, hint, accept }) {
 
 /* ── New Request Modal ── */
 function NewRequestModal({ isOpen, onClose, user, onCreated }) {
+  const { createHDRequest, getStudentProfile } = useData();
   const [selectedType, setSelectedType] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState([]);
+  const [creating, setCreating] = useState(false);
 
   const requestTypes = [
     { key: 'title_registration', label: 'Title Registration', icon: <HiOutlineDocumentText /> },
@@ -745,20 +862,41 @@ function NewRequestModal({ isOpen, onClose, user, onCreated }) {
 
   const handleClose = () => { setSelectedType(''); setTitle(''); setDescription(''); setFiles([]); onClose(); };
 
-  const handleCreate = () => {
-    if (!selectedType || !title.trim()) return;
-    const profile = require('../data/mockData').getStudentProfile(user.id);
-    const docs = files.map(f => ({ name: f.name, size: `${(f.size / 1024).toFixed(0)} KB`, uploadedAt: new Date() }));
-    const req = createHDRequest({
-      type: selectedType, title, description,
-      studentId: user.id,
-      studentName: user.name,
-      supervisorId: profile?.supervisorId || 'supervisor-001',
-      coordinatorId: 'coordinator-001',
-      documents: docs,
-    });
-    onCreated?.(req);
-    handleClose();
+  const handleCreate = async () => {
+    if (!selectedType || !title.trim() || creating) return;
+    setCreating(true);
+    try {
+      const profile = getStudentProfile(user.id);
+
+      // Upload files to Firebase Storage first
+      let uploadedDocs = [];
+      if (files.length > 0) {
+        const tempId = `temp_${Date.now()}`;
+        const uploadedFiles = await uploadRequestFiles(files, tempId, 'documents');
+        uploadedDocs = uploadedFiles.map(f => ({
+          name: f.name,
+          size: `${(f.size / 1024).toFixed(0)} KB`,
+          url: f.url,
+          path: f.path,
+          uploadedAt: new Date(),
+        }));
+      }
+
+      const req = await createHDRequest({
+        type: selectedType, title, description,
+        studentId: user.id,
+        studentName: user.name,
+        supervisorId: profile?.supervisorId || 'supervisor-001',
+        coordinatorId: 'coordinator-001',
+        documents: uploadedDocs,
+      });
+      onCreated?.(req);
+      handleClose();
+    } catch (err) {
+      console.error('Create request error:', err);
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -766,8 +904,8 @@ function NewRequestModal({ isOpen, onClose, user, onCreated }) {
       footer={
         <>
           <button className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={!selectedType || !title.trim()} onClick={handleCreate}>
-            <HiOutlinePlusCircle /> Create Request
+          <button className="btn btn-primary" disabled={!selectedType || !title.trim() || creating} onClick={handleCreate}>
+            <HiOutlinePlusCircle /> {creating ? 'Creating…' : 'Create Request'}
           </button>
         </>
       }

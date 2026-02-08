@@ -4,6 +4,8 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +18,20 @@ import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import RoleManagementPage from './pages/RoleManagementPage';
 import AcademicProgressPage from './pages/AcademicProgressPage';
+import DocumentReviewPage from './pages/DocumentReviewPage';
+import HelpPage from './pages/HelpPage';
+import SeedPage from './pages/SeedPage';
+
+function AuthLoadingScreen() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>PostGrad Portal</div>
+        <div style={{ color: 'var(--text-secondary)' }}>Loading…</div>
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user } = useAuth();
@@ -27,11 +43,14 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authLoading } = useAuth();
+
+  if (authLoading) return <AuthLoadingScreen />;
 
   return (
     <Routes>
       {/* Public */}
+      <Route path="/seed" element={<SeedPage />} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
@@ -47,6 +66,7 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/requests" element={<HDRequestsPage />} />
+        <Route path="/requests/:requestId/review" element={<DocumentReviewPage />} />
         <Route path="/tracker" element={<SubmissionTracker />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route
@@ -90,6 +110,7 @@ function AppRoutes() {
           }
         />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpPage />} />
       </Route>
 
       {/* Fallback */}
@@ -101,9 +122,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <AppRoutes />
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

@@ -3,9 +3,9 @@
 // ============================================
 
 import { useState, useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, Modal } from '../components/common';
-import { mockCalendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '../data/mockData';
 import { EVENT_TYPE_CONFIG } from '../utils/constants';
 import {
   format,
@@ -34,7 +34,7 @@ const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function CalendarPage() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { mockCalendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
   const defaultScope = user.role === 'student' ? 'department' : user.role === 'supervisor' ? 'department' : 'all';
   const [scopeFilter, setScopeFilter] = useState(defaultScope);
@@ -50,8 +50,7 @@ export default function CalendarPage() {
       if (scopeFilter === 'all') return true;
       return e.scope === scopeFilter || e.scope === 'all';
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeFilter, tick]);
+  }, [scopeFilter, mockCalendarEvents]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);

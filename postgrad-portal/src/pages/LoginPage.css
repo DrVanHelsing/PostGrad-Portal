@@ -46,16 +46,10 @@
   max-width: 400px;
 }
 .login-brand-logo {
-  width: 64px;
-  height: 64px;
-  background: var(--uwc-gold);
-  color: var(--uwc-navy-dark);
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 22px;
+  object-fit: contain;
   margin: 0 auto var(--space-2xl);
 }
 .login-brand-content h1 {

@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: get the current user's Firestore profile ──
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function userRole() {
+      return userDoc().data.role;
+    }
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isAuthenticated() && userRole() == 'admin';
+    }
+    function isCoordinator() {
+      return isAuthenticated() && userRole() == 'coordinator';
+    }
+    function isStaff() {
+      return isAdmin() || isCoordinator();
+    }
+
+    // ── Users collection ──
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── HD Requests ──
+    match /hdRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Calendar Events ──
+    match /calendarEvents/{eventId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // ── Milestones ──
+    match /milestones/{milestoneId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+    }
+
+    // ── Notifications ──
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Student Profiles ──
+    match /studentProfiles/{profileId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Audit Logs ──
+    match /auditLogs/{logId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ── Document Versions (review & version control) ──
+    match /documentVersions/{versionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Annotations (text highlight comments on documents) ──
+    match /annotations/{annotationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+  }
+}

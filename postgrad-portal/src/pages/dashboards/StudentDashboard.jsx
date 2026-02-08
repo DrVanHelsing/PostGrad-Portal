@@ -3,9 +3,9 @@
 // ============================================
 
 import { useState, useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../../components/common';
-import { getRequestsByStudent, getStudentProfile, mockMilestones, mockCalendarEvents, addMilestone } from '../../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, MILESTONE_TYPE_LABELS } from '../../utils/constants';
 import { formatDate, formatRelativeTime } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -19,22 +19,24 @@ import {
   HiOutlineAcademicCap,
   HiOutlineArrowRight,
   HiOutlineChartBarSquare,
+  HiOutlinePencilSquare,
+  HiOutlineTrash,
 } from 'react-icons/hi2';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { getRequestsByStudent, getStudentProfile, mockMilestones, mockCalendarEvents, addMilestone, updateMilestone, deleteMilestone } = useData();
   const navigate = useNavigate();
 
-  const requests = useMemo(() => getRequestsByStudent(user.id), [user.id, tick]);
+  const requests = useMemo(() => getRequestsByStudent(user.id), [user.id, getRequestsByStudent]);
   const profile = getStudentProfile(user.id);
-  const milestones = useMemo(() => mockMilestones.filter((m) => m.studentId === user.id), [user.id, tick]);
+  const milestones = useMemo(() => mockMilestones.filter((m) => m.studentId === user.id), [user.id, mockMilestones]);
   const upcomingEvents = useMemo(() =>
     mockCalendarEvents
       .filter((e) => new Date(e.date) >= new Date())
       .sort((a, b) => new Date(a.date) - new Date(b.date))
       .slice(0, 4),
-  [tick]);
+  [mockCalendarEvents]);
 
   const activeRequests = requests.filter((r) => !['approved', 'referred_back'].includes(r.status));
   const completedRequests = requests.filter((r) => r.status === 'approved');
@@ -44,15 +46,52 @@ export default function StudentDashboard() {
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [msForm, setMsForm] = useState({ title: '', type: 'conference', date: '', description: '' });
   const [toast, setToast] = useState(null);
+  const [editingMilestone, setEditingMilestone] = useState(null);
+  const [showEditMsModal, setShowEditMsModal] = useState(false);
+  const [editMsForm, setEditMsForm] = useState({ title: '', type: 'conference', date: '', description: '' });
 
   const showToast = (msg, variant = 'success') => { setToast({ msg, variant }); setTimeout(() => setToast(null), 3000); };
 
-  const handleAddMilestone = () => {
+  const handleAddMilestone = async () => {
     if (!msForm.title || !msForm.date) return;
-    addMilestone({ studentId: user.id, title: msForm.title, type: msForm.type, date: new Date(msForm.date), description: msForm.description });
+    await addMilestone({ studentId: user.id, title: msForm.title, type: msForm.type, date: new Date(msForm.date), description: msForm.description });
     setShowMilestoneModal(false);
     setMsForm({ title: '', type: 'conference', date: '', description: '' });
     showToast('Milestone added');
+  };
+
+  const openEditMilestone = (ms) => {
+    setEditingMilestone(ms);
+    const dateStr = ms.date instanceof Date ? ms.date.toISOString().split('T')[0] : new Date(ms.date).toISOString().split('T')[0];
+    setEditMsForm({ title: ms.title, type: ms.type || 'conference', date: dateStr, description: ms.description || '' });
+    setShowEditMsModal(true);
+  };
+
+  const handleEditMilestone = async () => {
+    if (!editMsForm.title || !editMsForm.date || !editingMilestone) return;
+    try {
+      await updateMilestone(editingMilestone.id, {
+        title: editMsForm.title,
+        type: editMsForm.type,
+        date: new Date(editMsForm.date),
+        description: editMsForm.description,
+      });
+      setShowEditMsModal(false);
+      setEditingMilestone(null);
+      showToast('Milestone updated');
+    } catch (err) {
+      showToast(err.message || 'Failed to update', 'error');
+    }
+  };
+
+  const handleDeleteMilestone = async (msId) => {
+    if (!window.confirm('Delete this milestone?')) return;
+    try {
+      await deleteMilestone(msId);
+      showToast('Milestone deleted');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete', 'error');
+    }
   };
 
   return (
@@ -158,12 +197,16 @@ export default function StudentDashboard() {
               <EmptyState icon={<HiOutlineAcademicCap />} title="No milestones yet" description="Track your academic progress by adding milestones" />
             ) : (
               milestones.map((ms) => (
-                <div key={ms.id} className="timeline-item">
-                  <div className="timeline-dot" style={{ background: 'var(--status-purple)' }} />
-                  <div className="timeline-content">
+                <div key={ms.id} className="timeline-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div className="timeline-dot" style={{ background: 'var(--status-purple)', flexShrink: 0, marginTop: 6 }} />
+                  <div className="timeline-content" style={{ flex: 1 }}>
                     <div className="timeline-title">{ms.title}</div>
                     <div className="timeline-desc">{MILESTONE_TYPE_LABELS[ms.type]} – {ms.description}</div>
                     <div className="timeline-date">{formatDate(ms.date)}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEditMilestone(ms)} title="Edit"><HiOutlinePencilSquare /></button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteMilestone(ms.id)} title="Delete" style={{ color: 'var(--status-danger)' }}><HiOutlineTrash /></button>
                   </div>
                 </div>
               ))
@@ -211,6 +254,32 @@ export default function StudentDashboard() {
         <div className="form-group">
           <label className="form-label">Description</label>
           <textarea className="form-textarea" rows={3} placeholder="Brief description..." value={msForm.description} onChange={e => setMsForm({ ...msForm, description: e.target.value })} />
+        </div>
+      </Modal>
+
+      {/* Edit Milestone Modal */}
+      <Modal isOpen={showEditMsModal} onClose={() => setShowEditMsModal(false)} title="Edit Milestone"
+        footer={<><button className="btn btn-secondary" onClick={() => setShowEditMsModal(false)}>Cancel</button>
+          <button className="btn btn-primary" disabled={!editMsForm.title || !editMsForm.date} onClick={handleEditMilestone}>Save Changes</button></>}>
+        <div className="form-group">
+          <label className="form-label">Title</label>
+          <input className="form-input" value={editMsForm.title} onChange={e => setEditMsForm({ ...editMsForm, title: e.target.value })} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+          <div className="form-group">
+            <label className="form-label">Type</label>
+            <select className="form-select" value={editMsForm.type} onChange={e => setEditMsForm({ ...editMsForm, type: e.target.value })}>
+              {Object.entries(MILESTONE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Date</label>
+            <input className="form-input" type="date" value={editMsForm.date} onChange={e => setEditMsForm({ ...editMsForm, date: e.target.value })} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Description</label>
+          <textarea className="form-textarea" rows={3} value={editMsForm.description} onChange={e => setEditMsForm({ ...editMsForm, description: e.target.value })} />
         </div>
       </Modal>
     </div>

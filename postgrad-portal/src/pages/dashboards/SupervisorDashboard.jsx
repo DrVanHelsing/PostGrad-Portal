@@ -3,9 +3,9 @@
 // ============================================
 
 import { useState, useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, Avatar, EmptyState, Modal } from '../../components/common';
-import { getRequestsForSupervisor, getStudentsForSupervisor, mockHDRequests, nudgeStudent, getUserById, mockMilestones } from '../../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, STUDENT_STATUS_CONFIG, MILESTONE_TYPE_LABELS } from '../../utils/constants';
 import { formatDate, formatRelativeTime } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -23,12 +23,12 @@ import {
 
 export default function SupervisorDashboard() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { getRequestsForSupervisor, getStudentsForSupervisor, mockHDRequests, nudgeStudent, getUserById, mockMilestones } = useData();
   const navigate = useNavigate();
 
-  const pendingReviews = useMemo(() => getRequestsForSupervisor(user.id), [user.id, tick]);
-  const students = useMemo(() => getStudentsForSupervisor(user.id), [user.id, tick]);
-  const allMyRequests = useMemo(() => mockHDRequests.filter(r => r.supervisorId === user.id || r.coSupervisorId === user.id), [user.id, tick]);
+  const pendingReviews = useMemo(() => getRequestsForSupervisor(user.id), [user.id, getRequestsForSupervisor]);
+  const students = useMemo(() => getStudentsForSupervisor(user.id), [user.id, getStudentsForSupervisor]);
+  const allMyRequests = useMemo(() => mockHDRequests.filter(r => r.supervisorId === user.id || r.coSupervisorId === user.id), [user.id, mockHDRequests]);
   const completedCount = allMyRequests.filter((r) => r.status === 'approved').length;
   const awaitingAction = pendingReviews.filter((r) => r.currentOwner === user.id);
 

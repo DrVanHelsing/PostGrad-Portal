@@ -2,10 +2,8 @@
 // Sidebar Component
 // ============================================
 
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getInitials } from '../../utils/helpers';
-import { ROLE_LABELS } from '../../utils/constants';
 import {
   HiOutlineHome,
   HiOutlineDocumentText,
@@ -14,11 +12,11 @@ import {
   HiOutlineUserGroup,
   HiOutlineShieldCheck,
   HiOutlineCog6Tooth,
-  HiOutlineArrowRightOnRectangle,
   HiOutlineAcademicCap,
   HiOutlineChartBar,
   HiOutlineChartBarSquare,
   HiOutlineWrenchScrewdriver,
+  HiOutlineQuestionMarkCircle,
 } from 'react-icons/hi2';
 
 const NAV_ITEMS = {
@@ -31,6 +29,7 @@ const NAV_ITEMS = {
     { to: '/calendar', icon: <HiOutlineCalendarDays />, label: 'Calendar' },
     { to: '/progress', icon: <HiOutlineChartBarSquare />, label: 'Academic Progress' },
     { to: '/settings', icon: <HiOutlineCog6Tooth />, label: 'Settings' },
+    { to: '/help', icon: <HiOutlineQuestionMarkCircle />, label: 'Help & Docs' },
   ],
   supervisor: [
     { section: 'Main' },
@@ -41,6 +40,7 @@ const NAV_ITEMS = {
     { section: 'Resources' },
     { to: '/calendar', icon: <HiOutlineCalendarDays />, label: 'Calendar' },
     { to: '/settings', icon: <HiOutlineCog6Tooth />, label: 'Settings' },
+    { to: '/help', icon: <HiOutlineQuestionMarkCircle />, label: 'Help & Docs' },
   ],
   coordinator: [
     { section: 'Main' },
@@ -53,6 +53,7 @@ const NAV_ITEMS = {
     { to: '/audit', icon: <HiOutlineShieldCheck />, label: 'Audit Logs' },
     { section: 'Admin' },
     { to: '/settings', icon: <HiOutlineCog6Tooth />, label: 'Settings' },
+    { to: '/help', icon: <HiOutlineQuestionMarkCircle />, label: 'Help & Docs' },
   ],
   admin: [
     { section: 'Main' },
@@ -65,11 +66,12 @@ const NAV_ITEMS = {
     { to: '/analytics', icon: <HiOutlineChartBar />, label: 'Analytics' },
     { to: '/roles', icon: <HiOutlineWrenchScrewdriver />, label: 'Role Management' },
     { to: '/settings', icon: <HiOutlineCog6Tooth />, label: 'Settings' },
+    { to: '/help', icon: <HiOutlineQuestionMarkCircle />, label: 'Help & Docs' },
   ],
 };
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const items = NAV_ITEMS[user?.role] || NAV_ITEMS.student;
 
   return (
@@ -77,12 +79,9 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-logo">
-          <div className="sidebar-brand-icon">UWC</div>
-          <div>
-            <h1>PostGrad Portal</h1>
-            <span>University of the Western Cape</span>
-          </div>
+          <img src="/uwc_logo.svg" alt="University of the Western Cape" className="sidebar-brand-icon" />
         </div>
+        <h1 className="sidebar-brand-title">PostGrad Portal</h1>
       </div>
 
       {/* Navigation */}
@@ -103,18 +102,6 @@ export default function Sidebar() {
           )
         )}
       </nav>
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <div className="sidebar-footer-avatar">{getInitials(user?.name)}</div>
-        <div className="sidebar-footer-info">
-          <div className="sidebar-footer-name">{user?.name}</div>
-          <div className="sidebar-footer-role">{ROLE_LABELS[user?.role] || 'User'}</div>
-        </div>
-        <button className="sidebar-logout-btn" onClick={logout} title="Sign out">
-          <HiOutlineArrowRightOnRectangle />
-        </button>
-      </div>
     </aside>
   );
 }

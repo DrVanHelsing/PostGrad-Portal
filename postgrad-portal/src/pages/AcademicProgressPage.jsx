@@ -3,9 +3,9 @@
 // ============================================
 
 import { useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState } from '../components/common';
-import { getRequestsByStudent, getStudentProfile, mockMilestones } from '../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, MILESTONE_TYPE_LABELS } from '../utils/constants';
 import { formatDate } from '../utils/helpers';
 import {
@@ -18,10 +18,10 @@ import {
 
 export default function AcademicProgressPage() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { getRequestsByStudent, getStudentProfile, mockMilestones } = useData();
   const profile = getStudentProfile(user.id);
-  const requests = useMemo(() => getRequestsByStudent(user.id), [user.id, tick]);
-  const milestones = useMemo(() => mockMilestones.filter(m => m.studentId === user.id).sort((a, b) => new Date(b.date) - new Date(a.date)), [user.id, tick]);
+  const requests = useMemo(() => getRequestsByStudent(user.id), [user.id, getRequestsByStudent]);
+  const milestones = useMemo(() => mockMilestones.filter(m => m.studentId === user.id).sort((a, b) => new Date(b.date) - new Date(a.date)), [user.id, mockMilestones]);
 
   const approved = requests.filter(r => r.status === 'approved');
   const pending = requests.filter(r => !['approved', 'referred_back'].includes(r.status));

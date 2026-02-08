@@ -1,0 +1,411 @@
+/* ============================================
+   Help & Documentation Page Styles
+   ============================================ */
+
+/* ── Search ── */
+.help-search-wrapper {
+  position: relative;
+  margin-bottom: var(--space-xl);
+}
+.help-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  font-size: 18px;
+  pointer-events: none;
+}
+.help-search-input {
+  width: 100%;
+  padding: 12px 18px 12px 44px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  transition: all var(--transition-fast);
+}
+.help-search-input:focus {
+  border-color: var(--uwc-navy);
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.08);
+  outline: none;
+}
+[data-theme="dark"] .help-search-input {
+  background: var(--bg-muted);
+  border-color: var(--border-default);
+}
+[data-theme="dark"] .help-search-input:focus {
+  border-color: var(--uwc-navy-light);
+  box-shadow: 0 0 0 3px rgba(59, 126, 201, 0.15);
+}
+
+/* ── Tabs ── */
+.help-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-2xl);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 0;
+}
+.help-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-xl);
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition-fast);
+}
+.help-tab:hover {
+  color: var(--text-primary);
+}
+.help-tab.active {
+  color: var(--uwc-navy);
+  font-weight: 600;
+  border-bottom-color: var(--uwc-navy);
+}
+[data-theme="dark"] .help-tab.active {
+  color: var(--uwc-navy-light);
+  border-bottom-color: var(--uwc-navy-light);
+}
+
+/* ── Section ── */
+.help-section {
+  animation: fadeIn 0.2s ease;
+}
+.help-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-4xl);
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+.help-empty svg {
+  font-size: 36px;
+}
+
+/* ── FAQ ── */
+.help-faq-category {
+  margin-bottom: var(--space-2xl);
+}
+.help-faq-category-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.help-faq-category-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.help-faq-category-icon {
+  font-size: 20px;
+  color: var(--uwc-navy);
+  display: flex;
+}
+[data-theme="dark"] .help-faq-category-icon {
+  color: var(--uwc-navy-light);
+}
+.help-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.help-faq-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+.help-faq-item.open {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+.help-faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  gap: var(--space-md);
+  transition: background var(--transition-fast);
+}
+.help-faq-question:hover {
+  background: var(--bg-surface-hover);
+}
+.help-faq-question svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+.help-faq-answer {
+  padding: 0 18px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  animation: fadeIn 0.15s ease;
+}
+.help-faq-answer p {
+  margin-bottom: 6px;
+}
+.help-faq-answer li {
+  margin-left: 20px;
+  margin-bottom: 4px;
+  list-style: disc;
+}
+.help-faq-answer strong {
+  color: var(--text-primary);
+}
+.help-faq-tour-link {
+  color: var(--uwc-gold);
+  font-style: italic;
+  font-size: 12px;
+}
+.help-start-tour-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1px solid var(--uwc-gold);
+  border-radius: var(--radius-md);
+  background: rgba(197, 165, 90, 0.08);
+  color: var(--uwc-gold);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.help-start-tour-inline:hover {
+  background: rgba(197, 165, 90, 0.15);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Guides ── */
+.help-guides-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.help-guide-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+.help-guide-card.expanded {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-md);
+}
+.help-guide-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 100%;
+  padding: var(--space-xl) var(--space-2xl);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background var(--transition-fast);
+  color: var(--text-primary);
+}
+.help-guide-card-header:hover {
+  background: var(--bg-surface-hover);
+}
+.help-guide-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--status-info-bg);
+  color: var(--status-info);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.help-guide-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.help-guide-card-info h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.help-guide-card-info p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.help-guide-card-header > svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+.help-guide-content {
+  padding: 0 var(--space-2xl) var(--space-2xl);
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--space-xl);
+}
+.help-guide-h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: var(--space-xl) 0 var(--space-md);
+}
+.help-guide-h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: var(--space-lg) 0 var(--space-sm);
+}
+.help-guide-p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+.help-guide-li {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-left: 20px;
+  margin-bottom: 4px;
+  list-style: disc;
+}
+.help-guide-li.help-guide-ol {
+  list-style: decimal;
+}
+.help-guide-li strong, .help-guide-p strong {
+  color: var(--text-primary);
+}
+.help-inline-code {
+  background: var(--bg-muted);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── Walkthroughs ── */
+.help-featured-tour {
+  background: linear-gradient(135deg, var(--uwc-navy) 0%, var(--uwc-navy-dark) 100%);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3xl);
+  margin-bottom: var(--space-2xl);
+  position: relative;
+  overflow: hidden;
+}
+.help-featured-tour::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(197, 165, 90, 0.08);
+}
+.help-featured-tour-content {
+  position: relative;
+  z-index: 1;
+}
+.help-featured-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(197, 165, 90, 0.2);
+  color: var(--uwc-gold);
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+.help-featured-tour h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: var(--space-sm);
+}
+.help-featured-tour p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: var(--space-xl);
+  max-width: 500px;
+}
+.help-tour-category {
+  margin-bottom: var(--space-2xl);
+}
+.help-tour-category-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-lg);
+}
+.help-tour-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-md);
+}
+.help-tour-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+.help-tour-card:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+.help-tour-card-info h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.help-tour-card-info p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+.help-tour-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.help-tour-meta span {
+  background: var(--bg-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}

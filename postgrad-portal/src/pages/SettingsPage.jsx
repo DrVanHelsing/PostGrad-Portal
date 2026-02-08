@@ -2,11 +2,11 @@
 // Settings Page – Functional forms
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, Avatar } from '../components/common';
 import { ROLE_LABELS } from '../utils/constants';
-import { getStudentProfile } from '../data/mockData';
 import { formatDate } from '../utils/helpers';
 import {
   HiOutlineCog6Tooth,
@@ -18,40 +18,81 @@ import {
 } from 'react-icons/hi2';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, changePassword, refreshProfile } = useAuth();
+  const { getStudentProfile, updateUserProfile } = useData();
   const profile = user?.role === 'student' ? getStudentProfile(user.id) : null;
   const [activeTab, setActiveTab] = useState('profile');
   const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };
 
   // Profile form
   const [profileForm, setProfileForm] = useState({ name: user?.name || '', email: user?.email || '', department: user?.department || '' });
 
-  // Notification prefs
+  // Notification prefs – loaded from user doc
   const [notifPrefs, setNotifPrefs] = useState({
     statusChanges: true, deadlines: true, committee: true, newReviews: true,
   });
+
+  // Load saved notification prefs from user doc
+  useEffect(() => {
+    if (user?.notificationPrefs) {
+      setNotifPrefs(prev => ({ ...prev, ...user.notificationPrefs }));
+    }
+  }, [user?.notificationPrefs]);
 
   // Password form
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [pwError, setPwError] = useState('');
 
-  const handleProfileSave = () => {
-    // Mock save
-    showToast('Profile updated (mock)');
+  const handleProfileSave = async () => {
+    setSaving(true);
+    try {
+      await updateUserProfile(user.id, {
+        name: profileForm.name.trim(),
+        department: profileForm.department.trim(),
+      });
+      await refreshProfile();
+      showToast('Profile updated successfully');
+    } catch (err) {
+      showToast(err.message || 'Failed to update profile', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleNotifSave = () => {
-    showToast('Notification preferences saved');
+  const handleNotifSave = async () => {
+    setSaving(true);
+    try {
+      await updateUserProfile(user.id, { notificationPrefs: notifPrefs });
+      await refreshProfile();
+      showToast('Notification preferences saved');
+    } catch (err) {
+      showToast(err.message || 'Failed to save preferences', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     setPwError('');
     if (!pwForm.current) { setPwError('Enter current password'); return; }
     if (pwForm.newPw.length < 8) { setPwError('Password must be at least 8 characters'); return; }
     if (pwForm.newPw !== pwForm.confirm) { setPwError('Passwords do not match'); return; }
-    setPwForm({ current: '', newPw: '', confirm: '' });
-    showToast('Password updated (mock)');
+    setSaving(true);
+    try {
+      const result = await changePassword(pwForm.current, pwForm.newPw);
+      if (!result.success) {
+        setPwError(result.error);
+      } else {
+        setPwForm({ current: '', newPw: '', confirm: '' });
+        showToast('Password updated successfully');
+      }
+    } catch (err) {
+      setPwError(err.message || 'Password change failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const tabs = [
@@ -144,7 +185,7 @@ export default function SettingsPage() {
                 )}
 
                 <div style={{ marginTop: 24 }}>
-                  <button className="btn btn-primary" onClick={handleProfileSave}>Save Changes</button>
+                  <button className="btn btn-primary" onClick={handleProfileSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
                 </div>
               </CardBody>
             </Card>
@@ -173,7 +214,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
                 <div style={{ marginTop: 24 }}>
-                  <button className="btn btn-primary" onClick={handleNotifSave}><HiOutlineCheckCircle /> Save Preferences</button>
+                  <button className="btn btn-primary" onClick={handleNotifSave} disabled={saving}><HiOutlineCheckCircle /> {saving ? 'Saving…' : 'Save Preferences'}</button>
                 </div>
               </CardBody>
             </Card>
@@ -203,7 +244,7 @@ export default function SettingsPage() {
                     <input className="form-input" type="password" placeholder="Confirm new password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} />
                   </div>
                   <div>
-                    <button className="btn btn-primary" onClick={handlePasswordChange}>Update Password</button>
+                    <button className="btn btn-primary" onClick={handlePasswordChange} disabled={saving}>{saving ? 'Updating…' : 'Update Password'}</button>
                   </div>
                 </div>
               </CardBody>

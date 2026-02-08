@@ -3,9 +3,9 @@
 // ============================================
 
 import { useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { StatusBadge, EmptyState } from '../components/common';
-import { mockHDRequests, getRequestsByStudent, getUserById } from '../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, WORKFLOW_STATES } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
 import {
@@ -94,14 +94,14 @@ function WorkflowProgress({ request, hasCosupervisor }) {
 
 export default function SubmissionTracker() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { mockHDRequests, getRequestsByStudent, getUserById } = useData();
 
   const requests = useMemo(() => {
     if (user.role === 'student') return getRequestsByStudent(user.id);
     if (user.role === 'coordinator' || user.role === 'admin') return [...mockHDRequests];
     return mockHDRequests.filter(r => r.supervisorId === user.id || r.coSupervisorId === user.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, tick]);
+  }, [user, mockHDRequests]);
 
   const sorted = useMemo(() => {
     return [...requests].sort((a, b) => {

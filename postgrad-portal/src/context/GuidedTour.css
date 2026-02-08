@@ -1,0 +1,182 @@
+/* ============================================
+   Guided Tour – Overlay & Tooltip Styles
+   Works across light and dark themes
+   ============================================ */
+
+/* ── Overlay ── */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.tour-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: all;
+}
+
+/* ── Highlight ring ── */
+.tour-highlight-ring {
+  position: fixed;
+  border: 2.5px solid #C5A55A;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4px rgba(197, 165, 90, 0.25), 0 0 20px rgba(197, 165, 90, 0.15);
+  pointer-events: none;
+  z-index: 10001;
+  animation: tour-pulse 2s ease-in-out infinite;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes tour-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(197, 165, 90, 0.25), 0 0 20px rgba(197, 165, 90, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(197, 165, 90, 0.35), 0 0 30px rgba(197, 165, 90, 0.25); }
+}
+
+/* Allow clicking on highlighted elements */
+.tour-highlight-ring ~ * {
+  pointer-events: all;
+}
+
+/* ── Tooltip ── */
+.tour-tooltip {
+  position: fixed;
+  width: 360px;
+  background: #1a2332;
+  color: #e8eaf0;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(197, 165, 90, 0.2);
+  pointer-events: all;
+  z-index: 10002;
+  animation: tour-tooltip-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes tour-tooltip-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.tour-tooltip-center {
+  max-width: 420px;
+}
+
+/* ── Counter ── */
+.tour-tooltip-counter {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #C5A55A;
+  margin-bottom: 8px;
+}
+
+/* ── Title ── */
+.tour-tooltip-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+/* ── Content ── */
+.tour-tooltip-content {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #b0b8c8;
+  margin-bottom: 16px;
+}
+.tour-tooltip-content strong {
+  color: #e8eaf0;
+  font-weight: 600;
+}
+.tour-tooltip-content code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── Click hint ── */
+.tour-tooltip-hint {
+  font-size: 12px;
+  color: #C5A55A;
+  font-weight: 500;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: rgba(197, 165, 90, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(197, 165, 90, 0.2);
+}
+
+/* ── Navigation buttons ── */
+.tour-tooltip-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.tour-tooltip-nav-right {
+  display: flex;
+  gap: 8px;
+}
+
+.tour-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+}
+.tour-btn-primary {
+  background: #C5A55A;
+  color: #1a2332;
+}
+.tour-btn-primary:hover {
+  background: #d4b76a;
+  box-shadow: 0 2px 8px rgba(197, 165, 90, 0.3);
+}
+.tour-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #b0b8c8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.tour-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e8eaf0;
+}
+.tour-btn-ghost {
+  background: transparent;
+  color: #6b7280;
+}
+.tour-btn-ghost:hover {
+  color: #b0b8c8;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Progress dots ── */
+.tour-progress {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+.tour-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+}
+.tour-progress-dot.active {
+  width: 18px;
+  border-radius: 3px;
+  background: #C5A55A;
+}
+.tour-progress-dot.completed {
+  background: rgba(197, 165, 90, 0.5);
+}

@@ -3,9 +3,9 @@
 // ============================================
 
 import { useMemo, useState } from 'react';
-import { useAuth, useDataRefresh } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, EmptyState } from '../../components/common';
-import { mockHDRequests, mockUsers, mockStudentProfiles, mockAuditLogs, exportToCSV, downloadCSV, getUserById } from '../../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, ROLE_LABELS } from '../../utils/constants';
 import { formatDate, formatDateTime, formatRelativeTime, groupBy } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -24,14 +24,14 @@ import {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { mockHDRequests, mockUsers, mockStudentProfiles, mockAuditLogs, exportToCSV, downloadCSV, getUserById } = useData();
   const navigate = useNavigate();
 
   const totalRequests = mockHDRequests.length;
-  const pendingRequests = useMemo(() => mockHDRequests.filter(r => !['approved', 'recommended', 'referred_back'].includes(r.status)), [tick]);
-  const recentAudit = useMemo(() => [...mockAuditLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 6), [tick]);
-  const requestsByType = useMemo(() => groupBy(mockHDRequests, 'type'), [tick]);
-  const requestsByStatus = useMemo(() => groupBy(mockHDRequests, 'status'), [tick]);
+  const pendingRequests = useMemo(() => mockHDRequests.filter(r => !['approved', 'recommended', 'referred_back'].includes(r.status)), [mockHDRequests]);
+  const recentAudit = useMemo(() => [...mockAuditLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 6), [mockAuditLogs]);
+  const requestsByType = useMemo(() => groupBy(mockHDRequests, 'type'), [mockHDRequests]);
+  const requestsByStatus = useMemo(() => groupBy(mockHDRequests, 'status'), [mockHDRequests]);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };

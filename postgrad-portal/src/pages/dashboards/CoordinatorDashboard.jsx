@@ -3,9 +3,9 @@
 // ============================================
 
 import { useMemo, useState } from 'react';
-import { useAuth, useDataRefresh } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, EmptyState } from '../../components/common';
-import { getRequestsForCoordinator, mockHDRequests, mockStudentProfiles, mockCalendarEvents, exportToCSV, downloadCSV, getUserById } from '../../data/mockData';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS } from '../../utils/constants';
 import { formatDate, formatRelativeTime } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -23,16 +23,16 @@ import {
 
 export default function CoordinatorDashboard() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { getRequestsForCoordinator, mockHDRequests, mockStudentProfiles, mockCalendarEvents, exportToCSV, downloadCSV, getUserById } = useData();
   const navigate = useNavigate();
 
-  const coordinatorRequests = useMemo(() => getRequestsForCoordinator(), [tick]);
-  const fhdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'fhd_pending'), [tick]);
-  const shdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'shd_pending'), [tick]);
+  const coordinatorRequests = useMemo(() => getRequestsForCoordinator(), [getRequestsForCoordinator]);
+  const fhdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'fhd_pending'), [mockHDRequests]);
+  const shdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'shd_pending'), [mockHDRequests]);
   const totalStudents = mockStudentProfiles.length;
   const upcomingEvents = useMemo(() =>
     mockCalendarEvents.filter((e) => new Date(e.date) >= new Date()).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 4),
-  [tick]);
+  [mockCalendarEvents]);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };

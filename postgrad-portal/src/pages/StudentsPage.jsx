@@ -3,9 +3,9 @@
 // ============================================
 
 import { useState, useMemo } from 'react';
-import { useAuth, useDataRefresh } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardBody, StatusBadge, Avatar, EmptyState, Modal } from '../components/common';
-import { mockStudentProfiles, mockUsers, getUserById, getRequestsByStudent, mockMilestones, updateStudentProfile, getStudentsForSupervisor } from '../data/mockData';
 import { STUDENT_STATUS_CONFIG, MILESTONE_TYPE_LABELS } from '../utils/constants';
 import { formatDate } from '../utils/helpers';
 import {
@@ -20,7 +20,7 @@ import {
 
 export default function StudentsPage() {
   const { user } = useAuth();
-  const tick = useDataRefresh();
+  const { mockStudentProfiles, mockUsers, getUserById, getRequestsByStudent, mockMilestones, updateStudentProfile, getStudentsForSupervisor } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -48,7 +48,7 @@ export default function StudentsPage() {
         const matchStatus = statusFilter === 'all' || s.status === statusFilter;
         return matchSearch && matchStatus;
       });
-  }, [search, statusFilter, tick]);
+  }, [search, statusFilter, mockStudentProfiles, mockMilestones]);
 
   const openEdit = (s) => {
     setEditStudent(s);

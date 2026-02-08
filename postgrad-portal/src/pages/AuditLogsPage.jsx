@@ -3,9 +3,8 @@
 // ============================================
 
 import { useState, useMemo } from 'react';
-import { useDataRefresh } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { Card, CardBody, EmptyState } from '../components/common';
-import { mockAuditLogs, exportToCSV, downloadCSV } from '../data/mockData';
 import { formatDateTime, formatDate } from '../utils/helpers';
 import {
   HiOutlineShieldCheck,
@@ -28,13 +27,13 @@ const ACTION_COLORS = {
 };
 
 export default function AuditLogsPage() {
-  const tick = useDataRefresh();
+  const { mockAuditLogs, exportToCSV, downloadCSV } = useData();
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const actions = useMemo(() => [...new Set(mockAuditLogs.map((l) => l.action))], [tick]);
+  const actions = useMemo(() => [...new Set(mockAuditLogs.map((l) => l.action))], [mockAuditLogs]);
 
   const logs = useMemo(() => {
     return mockAuditLogs
@@ -51,7 +50,7 @@ export default function AuditLogsPage() {
         return matchSearch && matchAction && matchFrom && matchTo;
       })
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [search, actionFilter, dateFrom, dateTo, tick]);
+  }, [search, actionFilter, dateFrom, dateTo, mockAuditLogs]);
 
   const handleExport = () => {
     const data = logs.map(l => ({

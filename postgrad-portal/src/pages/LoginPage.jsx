@@ -28,7 +28,7 @@ const FEATURES = [
 ];
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -36,23 +36,36 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (!email.trim()) {
       setError('Please enter your email address');
       return;
     }
-    const result = login(email, password);
+    if (!password.trim()) {
+      setError('Please enter your password');
+      return;
+    }
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
     if (!result.success) {
       setError(result.error);
     }
   };
 
-  const handleDemoLogin = (demoEmail) => {
+  const handleDemoLogin = async (demoEmail) => {
     setEmail(demoEmail);
     setError('');
-    login(demoEmail, 'demo');
+    setLoading(true);
+    const result = await login(demoEmail, 'Portal@2026');
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error);
+    }
   };
 
   return (
@@ -60,7 +73,7 @@ export default function LoginPage() {
       {/* Branding panel */}
       <div className="login-brand">
         <div className="login-brand-content">
-          <div className="login-brand-logo">UWC</div>
+          <img src="/uwc_logo.svg" alt="University of the Western Cape" className="login-brand-logo" />
           <h1>PostGrad Portal</h1>
           <p>
             Streamlined postgraduate administration for the University of the Western Cape.
@@ -115,8 +128,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <button type="submit" className="login-submit-btn">
-              Sign in
+            <button type="submit" className="login-submit-btn" disabled={loading}>
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
             <button type="button" className="login-forgot-btn" onClick={() => setShowForgot(true)}>
               Forgot password?
@@ -150,7 +163,10 @@ export default function LoginPage() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn btn-secondary" onClick={() => setShowForgot(false)}>Cancel</button>
                       <button className="btn btn-primary" disabled={!forgotEmail.includes('@')}
-                        onClick={() => setForgotSent(true)}>Send Reset Link</button>
+                        onClick={async () => {
+                          try { await resetPassword(forgotEmail); } catch (_) { /* silent */ }
+                          setForgotSent(true);
+                        }}>Send Reset Link</button>
                     </div>
                   </>
                 )}

@@ -5,6 +5,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getInitials, formatRelativeTime } from '../../utils/helpers';
 import { ROLE_LABELS, NOTIFICATION_TYPE_CONFIG } from '../../utils/constants';
 import {
@@ -12,18 +14,31 @@ import {
   HiOutlineBell,
   HiOutlineChevronDown,
   HiOutlineCheckCircle,
+  HiOutlineSun,
+  HiOutlineMoon,
+  HiOutlineCog6Tooth,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineUser,
 } from 'react-icons/hi2';
 
 export default function Header() {
-  const { user, notifications, unreadCount, markAllRead, markOneRead } = useAuth();
+  const { user, logout } = useAuth();
+  const { mockNotifications: notifications, unreadCount, markAllRead, markOneRead } = useData();
+  const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const dropdownRef = useRef(null);
+  const userMenuRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -45,6 +60,16 @@ export default function Header() {
       </div>
 
       <div className="header-right">
+        {/* Theme toggle */}
+        <button
+          className="header-icon-btn"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? <HiOutlineMoon /> : <HiOutlineSun />}
+        </button>
+
         {/* Notifications */}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
@@ -108,14 +133,42 @@ export default function Header() {
           )}
         </div>
 
-        {/* User */}
-        <div className="header-user">
-          <div className="header-user-avatar">{getInitials(user?.name)}</div>
-          <div className="header-user-info">
-            <span className="header-user-name">{user?.name}</span>
-            <span className="header-user-role">{ROLE_LABELS[user?.role]}</span>
+        {/* User menu */}
+        <div style={{ position: 'relative' }} ref={userMenuRef}>
+          <div className="header-user" onClick={() => setShowUserMenu(!showUserMenu)}>
+            <div className="header-user-avatar">{getInitials(user?.name)}</div>
+            <div className="header-user-info">
+              <span className="header-user-name">{user?.name}</span>
+              <span className="header-user-role">{ROLE_LABELS[user?.role]}</span>
+            </div>
+            <HiOutlineChevronDown style={{ fontSize: 14, color: 'var(--text-tertiary)', transition: 'transform 0.2s', transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
           </div>
-          <HiOutlineChevronDown style={{ fontSize: 14, color: 'var(--text-tertiary)' }} />
+
+          {showUserMenu && (
+            <div className="user-dropdown">
+              <div className="user-dropdown-header">
+                <div className="user-dropdown-avatar">{getInitials(user?.name)}</div>
+                <div>
+                  <div className="user-dropdown-name">{user?.name}</div>
+                  <div className="user-dropdown-email">{user?.email}</div>
+                </div>
+              </div>
+              <div className="user-dropdown-divider" />
+              <button className="user-dropdown-item" onClick={() => { navigate('/settings'); setShowUserMenu(false); }}>
+                <HiOutlineUser /> My Profile
+              </button>
+              <button className="user-dropdown-item" onClick={() => { navigate('/settings'); setShowUserMenu(false); }}>
+                <HiOutlineCog6Tooth /> Settings
+              </button>
+              <button className="user-dropdown-item" onClick={() => { navigate('/help'); setShowUserMenu(false); }}>
+                <HiOutlineQuestionMarkCircle /> Help & Docs
+              </button>
+              <div className="user-dropdown-divider" />
+              <button className="user-dropdown-item user-dropdown-item-danger" onClick={logout}>
+                <HiOutlineArrowRightOnRectangle /> Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
