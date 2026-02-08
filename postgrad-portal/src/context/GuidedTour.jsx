@@ -166,6 +166,15 @@ export function TourProvider({ children }) {
     if (i >= 0 && i < totalSteps) setStepIndex(i);
   }, [totalSteps]);
 
+  /* ── Elevate the highlighted element above the overlay so it's clickable ── */
+  useEffect(() => {
+    if (!activeTour || !currentStep?.selector) return;
+    const el = document.querySelector(currentStep.selector);
+    if (!el) return;
+    el.classList.add('tour-elevated');
+    return () => el.classList.remove('tour-elevated');
+  }, [activeTour, currentStep, highlightRect]);
+
   /* ── Handle "click target to proceed" steps ── */
   useEffect(() => {
     if (!currentStep?.clickToProceed || !currentStep?.selector) return;

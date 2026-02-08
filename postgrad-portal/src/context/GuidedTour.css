@@ -35,9 +35,11 @@
   50% { box-shadow: 0 0 0 6px rgba(197, 165, 90, 0.35), 0 0 30px rgba(197, 165, 90, 0.25); }
 }
 
-/* Allow clicking on highlighted elements */
-.tour-highlight-ring ~ * {
-  pointer-events: all;
+/* Elevate highlighted element above the overlay so it's fully interactive */
+.tour-elevated {
+  position: relative !important;
+  z-index: 10001 !important;
+  pointer-events: all !important;
 }
 
 /* ── Tooltip ── */
