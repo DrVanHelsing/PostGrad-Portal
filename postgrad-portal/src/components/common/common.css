@@ -146,6 +146,27 @@
 .modal-lg {
   max-width: 720px;
 }
+/* ── Fullscreen modal variant ── */
+.modal-overlay-fullscreen {
+  padding: 0;
+}
+.modal-fullscreen {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  animation: none;
+}
+.modal-fullscreen .modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .modal-header {
   padding: var(--space-2xl) var(--space-2xl) var(--space-lg);
   display: flex;

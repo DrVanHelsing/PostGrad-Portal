@@ -7,6 +7,21 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { useAuth } from './AuthContext';
 import { COLLECTIONS } from '../firebase/collections';
 import {
+  subscribeToFormTemplates,
+  subscribeToFormSubmissions,
+  createFormSubmission as fsCreateFormSubmission,
+  updateFormSubmissionData as fsUpdateFormSubmissionData,
+  completeFormSection as fsCompleteFormSection,
+  referBackFormSection as fsReferBackFormSection,
+  updateFormSubmissionStatus as fsUpdateFormSubmissionStatus,
+  linkFormSubmission as fsLinkFormSubmission,
+  setFormTemplate as fsSetFormTemplate,
+  updateFormTemplate as fsUpdateFormTemplate,
+  publishFormTemplate as fsPublishFormTemplate,
+  archiveFormTemplate as fsArchiveFormTemplate,
+  duplicateFormTemplate as fsDuplicateFormTemplate,
+} from '../firebase/formTemplates';
+import {
   subscribeToCollection,
   subscribeToUserNotifications,
   // Mutations
@@ -58,13 +73,15 @@ export function DataProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [studentProfiles, setStudentProfiles] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [formTemplates, setFormTemplates] = useState([]);
+  const [formSubmissions, setFormSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   /* ── Subscribe to collections on mount ── */
   useEffect(() => {
     const unsubs = [];
     let snapCount = 0;
-    const totalSnaps = 6; // number of collection subscriptions
+    const totalSnaps = 8; // number of collection subscriptions
     const markReady = () => { snapCount++; if (snapCount >= totalSnaps) setLoading(false); };
 
     unsubs.push(subscribeToCollection(COLLECTIONS.USERS, (d) => { setUsers(d); markReady(); }));
@@ -73,6 +90,8 @@ export function DataProvider({ children }) {
     unsubs.push(subscribeToCollection(COLLECTIONS.MILESTONES, (d) => { setMilestones(d); markReady(); }));
     unsubs.push(subscribeToCollection(COLLECTIONS.STUDENT_PROFILES, (d) => { setStudentProfiles(d); markReady(); }));
     unsubs.push(subscribeToCollection(COLLECTIONS.AUDIT_LOGS, (d) => { setAuditLogs(d); markReady(); }, [orderBy('timestamp', 'desc')]));
+    unsubs.push(subscribeToFormTemplates((d) => { setFormTemplates(d); markReady(); }));
+    unsubs.push(subscribeToFormSubmissions((d) => { setFormSubmissions(d); markReady(); }));
 
     // Fallback – if snapshots haven't all arrived in 5s, show the app anyway
     const fallback = setTimeout(() => setLoading(false), 5000);
@@ -133,6 +152,11 @@ export function DataProvider({ children }) {
 
   const getUserById = useCallback(
     (userId) => users.find(u => u.id === userId),
+    [users]
+  );
+
+  const getUsersByRole = useCallback(
+    (...roles) => users.filter(u => roles.includes(u.role)),
     [users]
   );
 
@@ -248,6 +272,62 @@ export function DataProvider({ children }) {
     []
   );
 
+  /* ── Form Template & Submission mutations ── */
+  const createFormSubmission = useCallback(
+    (data) => fsCreateFormSubmission(data),
+    []
+  );
+  const updateFormSubmissionData = useCallback(
+    (submissionId, fieldId, value) => fsUpdateFormSubmissionData(submissionId, fieldId, value),
+    []
+  );
+  const completeFormSection = useCallback(
+    (submissionId, sectionId, userId, signatureData) => fsCompleteFormSection(submissionId, sectionId, userId, signatureData),
+    []
+  );
+  const referBackFormSection = useCallback(
+    (submissionId, sectionId, userId, comment) => fsReferBackFormSection(submissionId, sectionId, userId, comment),
+    []
+  );
+  const updateFormSubmissionStatus = useCallback(
+    (submissionId, status) => fsUpdateFormSubmissionStatus(submissionId, status),
+    []
+  );
+  const linkFormSubmission = useCallback(
+    (submissionId, requestId) => fsLinkFormSubmission(submissionId, requestId),
+    []
+  );
+  const setFormTemplate = useCallback(
+    (templateId, data) => fsSetFormTemplate(templateId, data),
+    []
+  );
+  const updateFormTemplate = useCallback(
+    (templateId, updates) => fsUpdateFormTemplate(templateId, updates),
+    []
+  );
+  const publishFormTemplate = useCallback(
+    (templateId) => fsPublishFormTemplate(templateId),
+    []
+  );
+  const archiveFormTemplate = useCallback(
+    (templateId) => fsArchiveFormTemplate(templateId),
+    []
+  );
+  const duplicateFormTemplate = useCallback(
+    (templateId) => fsDuplicateFormTemplate(templateId),
+    []
+  );
+
+  const getFormTemplateBySlug = useCallback(
+    (slug) => formTemplates.find(t => t.slug === slug),
+    [formTemplates]
+  );
+
+  const getFormSubmissionsForRequest = useCallback(
+    (requestId) => formSubmissions.filter(s => s.linkedRequestId === requestId),
+    [formSubmissions]
+  );
+
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.read).length,
     [notifications]
@@ -291,6 +371,8 @@ export function DataProvider({ children }) {
     mockNotifications: notifications,
     mockStudentProfiles: studentProfiles,
     mockAuditLogs: auditLogs,
+    formTemplates,
+    formSubmissions,
 
     // Query functions
     getRequestsByStudent,
@@ -300,6 +382,7 @@ export function DataProvider({ children }) {
     getStudentProfile,
     getStudentsForSupervisor,
     getUserById,
+    getUsersByRole,
 
     // Notification state
     unreadCount,
@@ -342,6 +425,21 @@ export function DataProvider({ children }) {
     updateRequestDocUrls,
     checkOverdueRequests: (reqs) => checkOverdueRequests(reqs, users),
 
+    // Form template & submission operations
+    createFormSubmission,
+    updateFormSubmissionData,
+    completeFormSection,
+    referBackFormSection,
+    updateFormSubmissionStatus,
+    linkFormSubmission,
+    setFormTemplate,
+    updateFormTemplate,
+    publishFormTemplate,
+    archiveFormTemplate,
+    duplicateFormTemplate,
+    getFormTemplateBySlug,
+    getFormSubmissionsForRequest,
+
     // Utilities
     generateAccessCode,
     exportToCSV,
@@ -349,8 +447,9 @@ export function DataProvider({ children }) {
   }), [
     loading, users, hdRequests, calendarEvents, milestones, notifications,
     studentProfiles, auditLogs, unreadCount,
+    formTemplates, formSubmissions,
     getRequestsByStudent, getRequestsForSupervisor, getRequestsForCoordinator,
-    getNotificationsForUser, getStudentProfile, getStudentsForSupervisor, getUserById,
+    getNotificationsForUser, getStudentProfile, getStudentsForSupervisor, getUserById, getUsersByRole,
     createHDRequest, submitToSupervisor, validateAccessCode,
     supervisorApprove, coSupervisorSign, referBack, forwardToFHD,
     recordFHDOutcome, recordSHDOutcome, resubmitRequest,
@@ -360,6 +459,11 @@ export function DataProvider({ children }) {
     markAllNotificationsRead, markOneNotificationRead,
     updateDraftRequest, updateUserProfileFn, updateMilestone, deleteMilestone,
     createUserDoc, deleteUserDoc, updateRequestDocUrls,
+    createFormSubmission, updateFormSubmissionData, completeFormSection,
+    referBackFormSection, updateFormSubmissionStatus, linkFormSubmission,
+    setFormTemplate, updateFormTemplate, publishFormTemplate,
+    archiveFormTemplate, duplicateFormTemplate,
+    getFormTemplateBySlug, getFormSubmissionsForRequest,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

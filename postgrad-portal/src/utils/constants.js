@@ -73,4 +73,60 @@ export const ROLE_LABELS = {
   supervisor: 'Supervisor',
   coordinator: 'Coordinator',
   admin: 'Administrator',
+  external: 'External User',
+  examiner: 'Examiner',
+};
+
+/* Internal roles that can be created by admin (shown in Create User dropdowns) */
+export const CREATABLE_ROLES = {
+  student: 'Student',
+  supervisor: 'Supervisor',
+  coordinator: 'Coordinator',
+  admin: 'Administrator',
+  external: 'External User',
+  examiner: 'Examiner',
+};
+
+/* Form Template Categories */
+export const FORM_CATEGORIES = {
+  registration: { label: 'Registration & Title', icon: 'HiOutlineDocumentText' },
+  progress: { label: 'Progress & Reports', icon: 'HiOutlineChartBarSquare' },
+  examination: { label: 'Examination', icon: 'HiOutlineAcademicCap' },
+  supervision: { label: 'Supervision Changes', icon: 'HiOutlineUserGroup' },
+  administrative: { label: 'Administrative', icon: 'HiOutlineCog6Tooth' },
+  other: { label: 'Other', icon: 'HiOutlineDocumentText' },
+};
+
+/* Section role colour mapping */
+export const SECTION_ROLE_COLORS = {
+  student: { color: 'var(--status-info)', bg: 'var(--status-info-bg)', label: 'Student' },
+  supervisor: { color: 'var(--status-purple)', bg: 'var(--status-purple-bg)', label: 'Supervisor' },
+  co_supervisor: { color: 'var(--status-indigo)', bg: 'var(--status-indigo-bg)', label: 'Co-Supervisor' },
+  coordinator: { color: 'var(--status-orange)', bg: 'var(--status-orange-bg)', label: 'Coordinator' },
+  admin: { color: 'var(--status-danger)', bg: 'var(--status-danger-bg)', label: 'Admin' },
+  examiner: { color: 'var(--status-teal)', bg: 'var(--status-teal-bg)', label: 'Examiner' },
+};
+
+/* Extended request type labels – covers all 20 FHD form types */
+export const FORM_TYPE_LABELS = {
+  title_registration: 'Title Registration',
+  progress_report: 'Progress Report',
+  intention_to_submit: 'Intention to Submit',
+  appointment_of_examiners: 'Appointment of Examiners',
+  examiner_summary_cv: 'Examiner Summary CV',
+  change_of_examiners: 'Change of Examiners',
+  appointment_of_arbiter: 'Appointment of Arbiter',
+  leave_of_absence: 'Leave of Absence',
+  addition_of_co_supervisor: 'Addition of Co-Supervisor',
+  change_of_supervisor: 'Change of Supervisor / Co-Supervisor',
+  removal_of_supervisor: 'Removal of Supervisor / Co-Supervisor',
+  change_of_thesis_title: 'Change of Thesis Title',
+  readmission: 'Request for Readmission',
+  upgrade_masters_to_doctoral: 'Upgrade Masters to Doctoral',
+  mou: 'Memorandum of Understanding',
+  supervisor_profile_rott: 'Prospective Supervisor Profile (ROTT)',
+  supervisor_summative_report: 'Supervisor Summative Report',
+  other_request: 'Other Request',
+  ns_higher_degrees_cover: 'Natural Sciences Higher Degrees',
+  fhd_checklist: 'FHD Submissions Checklist',
 };

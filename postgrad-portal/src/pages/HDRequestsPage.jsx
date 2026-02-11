@@ -7,13 +7,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../components/common';
+import { DynamicFormRenderer } from '../components/forms';
 import SignaturePad from '../components/common/SignaturePad';
-import { STATUS_CONFIG, REQUEST_TYPE_LABELS } from '../utils/constants';
+import { STATUS_CONFIG, REQUEST_TYPE_LABELS, FORM_TYPE_LABELS } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
 import { uploadRequestFiles, getFileUrl } from '../firebase/storage';
 import { generateRequestPdf } from '../services/pdfService';
 import { uploadPdfBlob } from '../firebase/storage';
-import { sendRequestSubmittedEmail, sendRequestApprovedEmail, sendReferredBackEmail, sendFinalApprovalEmail, sendNudgeEmail } from '../services/emailService';
+import {
+  sendRequestSubmittedEmail, sendRequestApprovedEmail, sendReferredBackEmail,
+  sendFinalApprovalEmail, sendNudgeEmail, sendSectionHandoffEmail,
+  sendSectionReferBackEmail, sendFormCompletionEmail, sendEscalationEmail,
+} from '../services/emailService';
+import UserPicker from '../components/common/UserPicker';
+import NotificationAlerts from '../components/common/NotificationAlerts';
+import { ALL_PREBUILT_TEMPLATES } from '../firebase/prebuiltTemplates';
 import {
   HiOutlineDocumentText,
   HiOutlineMagnifyingGlass,
@@ -50,12 +58,17 @@ export default function HDRequestsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const {
-    mockHDRequests, getRequestsByStudent, getRequestsForSupervisor,
+    mockHDRequests, mockUsers, getRequestsByStudent, getRequestsForSupervisor,
     getRequestsForCoordinator, getUserById, createHDRequest,
     submitToSupervisor, validateAccessCode, supervisorApprove,
     coSupervisorSign, referBack, forwardToFHD, recordFHDOutcome,
     recordSHDOutcome, resubmitRequest, getStudentProfile,
     updateRequestDocUrls, updateDraftRequest,
+    formTemplates, formSubmissions,
+    createFormSubmission, updateFormSubmissionData,
+    completeFormSection, referBackFormSection,
+    updateFormSubmissionStatus, linkFormSubmission,
+    getFormSubmissionsForRequest,
   } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -79,6 +92,22 @@ export default function HDRequestsPage() {
   const [tick, setTick] = useState(0); // for timer auto-refresh
   const [showEditDraftModal, setShowEditDraftModal] = useState(false);
   const [editDraftForm, setEditDraftForm] = useState({ title: '', description: '' });
+
+  /* ── New Form System state ── */
+  const [showFormSelectModal, setShowFormSelectModal] = useState(false);
+  const [activeFormSubmission, setActiveFormSubmission] = useState(null);
+  const [activeFormTemplate, setActiveFormTemplate] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [formSectionStatuses, setFormSectionStatuses] = useState({});
+  const [formSignatures, setFormSignatures] = useState({});
+  const [formValidationErrors, setFormValidationErrors] = useState({});
+  const [formFullscreen, setFormFullscreen] = useState(false);
+
+  /* ── UserPicker state (for supervisor/coordinator selection) ── */
+  const [showSupervisorPicker, setShowSupervisorPicker] = useState(false);
+  const [showCoordinatorPicker, setShowCoordinatorPicker] = useState(false);
+  const [selectedSupervisor, setSelectedSupervisor] = useState(null);
+  const [selectedCoordinator, setSelectedCoordinator] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -105,6 +134,8 @@ export default function HDRequestsPage() {
     if (user.role === 'student') return getRequestsByStudent(user.id);
     if (user.role === 'supervisor') return [...getRequestsForSupervisor(user.id), ...mockHDRequests.filter(r => (r.supervisorId === user.id || r.coSupervisorId === user.id) && !['submitted_to_supervisor', 'supervisor_review', 'co_supervisor_review'].includes(r.status))];
     if (user.role === 'coordinator' || user.role === 'admin') return [...mockHDRequests];
+    // External / Examiner: show requests where they're the current owner or assigned
+    if (user.role === 'external' || user.role === 'examiner') return mockHDRequests.filter(r => r.currentOwner === user.id || r.examinerId === user.id);
     return mockHDRequests;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, mockHDRequests]);
@@ -165,6 +196,13 @@ export default function HDRequestsPage() {
     if (student) {
       sendReferredBackEmail(student.email, student.name, selectedRequest.title, referBackReason, user.name).catch(() => {});
     }
+    // Email: notify supervisor (if the refer-back is from coordinator)
+    if (user.role === 'coordinator' && selectedRequest.supervisorId !== user.id) {
+      const sup = getUserById(selectedRequest.supervisorId);
+      if (sup) {
+        sendSectionReferBackEmail(sup.email, sup.name, selectedRequest.title, 'Request', user.name, referBackReason).catch(() => {});
+      }
+    }
   };
 
   const openSignature = (action) => {
@@ -182,12 +220,40 @@ export default function HDRequestsPage() {
       if (student) {
         sendRequestApprovedEmail(student.email, student.name, selectedRequest.title, 'Supervisor', user.name).catch(() => {});
       }
+      // Email: notify co-supervisor if applicable
+      if (selectedRequest.coSupervisorId) {
+        const coSup = getUserById(selectedRequest.coSupervisorId);
+        if (coSup) {
+          sendSectionHandoffEmail(coSup.email, coSup.name, selectedRequest.title, 'Co-Supervisor Review', user.name).catch(() => {});
+        }
+      } else {
+        // No co-supervisor → notify coordinator
+        const coord = getUserById(selectedRequest.coordinatorId);
+        if (coord) {
+          sendSectionHandoffEmail(coord.email, coord.name, selectedRequest.title, 'Coordinator Review', user.name).catch(() => {});
+        }
+      }
     } else if (signatureAction === 'coSupervisorSign') {
       await coSupervisorSign(selectedRequest.id, user.id, sigData.name);
       showToast('Co-supervisor signature applied. Forwarded to coordinator.');
+      // Email: notify coordinator
+      const coord = getUserById(selectedRequest.coordinatorId);
+      if (coord) {
+        sendSectionHandoffEmail(coord.email, coord.name, selectedRequest.title, 'Coordinator Review', user.name).catch(() => {});
+      }
+      // Email: notify student
+      const student = getUserById(selectedRequest.studentId);
+      if (student) {
+        sendRequestApprovedEmail(student.email, student.name, selectedRequest.title, 'Co-Supervisor', user.name).catch(() => {});
+      }
     } else if (signatureAction === 'coordinatorForward') {
       await forwardToFHD(selectedRequest.id, user.id, sigData.name);
       showToast('Signed and forwarded to the Faculty Board.');
+      // Email: notify student that request is at Faculty Board
+      const student = getUserById(selectedRequest.studentId);
+      if (student) {
+        sendRequestApprovedEmail(student.email, student.name, selectedRequest.title, 'Coordinator (forwarded to Faculty Board)', user.name).catch(() => {});
+      }
     }
     setSignatureAction(null);
   };
@@ -196,8 +262,24 @@ export default function HDRequestsPage() {
     if (!fhdForm.outcome) return;
     await recordFHDOutcome(selectedRequest.id, user.id, fhdForm.outcome, fhdForm.referenceNumber, fhdForm.reason);
     setShowFHDOutcomeModal(false);
-    setFhdForm({ outcome: '', referenceNumber: '', reason: '' });
     showToast(`Faculty Board outcome recorded: ${fhdForm.outcome}`);
+    // Email: notify student of FHD outcome
+    const student = getUserById(selectedRequest.studentId);
+    if (student) {
+      if (fhdForm.outcome === 'approved') {
+        sendRequestApprovedEmail(student.email, student.name, selectedRequest.title, 'Faculty Board', user.name).catch(() => {});
+      } else if (fhdForm.outcome === 'referred_back') {
+        sendReferredBackEmail(student.email, student.name, selectedRequest.title, fhdForm.reason || 'Faculty Board decision', user.name).catch(() => {});
+      }
+    }
+    // Email: notify supervisor of FHD referral
+    if (fhdForm.outcome === 'referred_back') {
+      const sup = getUserById(selectedRequest.supervisorId);
+      if (sup) {
+        sendReferredBackEmail(sup.email, sup.name, selectedRequest.title, fhdForm.reason || 'Faculty Board decision', 'Faculty Board').catch(() => {});
+      }
+    }
+    setFhdForm({ outcome: '', referenceNumber: '', reason: '' });
   };
 
   const handleSHDOutcome = async () => {
@@ -282,7 +364,15 @@ export default function HDRequestsPage() {
             <HiOutlinePlusCircle /> New Request
           </button>
         )}
+        {(user.role === 'supervisor' || user.role === 'admin' || user.role === 'coordinator' || user.role === 'external' || user.role === 'examiner') && (
+          <button className="btn btn-primary" onClick={() => setShowNewRequestModal(true)}>
+            <HiOutlinePlusCircle /> New Form
+          </button>
+        )}
       </div>
+
+      {/* Alert banners for overdue / pending actions */}
+      <NotificationAlerts onNavigate={null} />
 
       {/* Toolbar */}
       <div className="requests-toolbar">
@@ -694,8 +784,202 @@ export default function HDRequestsPage() {
         </div>
       </Modal>
 
-      {/* ── New Request Modal ── */}
-      <NewRequestModal isOpen={showNewRequestModal} onClose={() => setShowNewRequestModal(false)} user={user} onCreated={(r) => showToast(`Request "${r.title}" created.`)} />
+      {/* ── New Request Modal – Template Selection ── */}
+      <TemplateSelectionModal
+        isOpen={showNewRequestModal}
+        onClose={() => setShowNewRequestModal(false)}
+        user={user}
+        formTemplates={formTemplates}
+        onSelectTemplate={(template) => {
+          const studentProfile = getStudentProfile(user.id);
+          setActiveFormTemplate(template);
+          setFormData({});
+          setFormSectionStatuses({});
+          setFormSignatures({});
+          setFormValidationErrors({});
+          setShowNewRequestModal(false);
+          // Pre-populate auto fields will happen in DynamicFormRenderer
+        }}
+      />
+
+      {/* ── Form Fill Modal ── */}
+      <Modal
+        isOpen={!!activeFormTemplate}
+        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setFormFullscreen(false); setSelectedSupervisor(null); setSelectedCoordinator(null); }}
+        title={activeFormTemplate?.layout?.header?.formTitle || activeFormTemplate?.name || 'Form'}
+        large
+        fullscreen={formFullscreen}
+        onToggleFullscreen={() => setFormFullscreen(f => !f)}
+      >
+        {activeFormTemplate && (
+          <>
+            {/* ── Supervisor / Coordinator Assignment Bar ── */}
+            <div style={{
+              display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)',
+              padding: 'var(--space-md)', borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-muted)', border: '1px solid var(--border-color)',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Supervisor</div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', justifyContent: 'flex-start', gap: 6 }}
+                  onClick={() => setShowSupervisorPicker(true)}
+                >
+                  {selectedSupervisor ? (
+                    <><HiOutlineCheckCircle style={{ color: 'var(--status-success)' }} /> {selectedSupervisor.name}</>
+                  ) : (
+                    getStudentProfile(user.id)?.supervisorId ? (
+                      <>{getUserById(getStudentProfile(user.id)?.supervisorId)?.name || 'Assigned Supervisor'}</>
+                    ) : (
+                      <><HiOutlinePlusCircle /> Select Supervisor</>
+                    )
+                  )}
+                </button>
+              </div>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coordinator</div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', justifyContent: 'flex-start', gap: 6 }}
+                  onClick={() => setShowCoordinatorPicker(true)}
+                >
+                  {selectedCoordinator ? (
+                    <><HiOutlineCheckCircle style={{ color: 'var(--status-success)' }} /> {selectedCoordinator.name}</>
+                  ) : (
+                    <>{mockUsers.find(u => u.role === 'coordinator')?.name || 'Auto-assigned'}</>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <DynamicFormRenderer
+            template={activeFormTemplate}
+            formData={formData}
+            sectionStatuses={formSectionStatuses}
+            signatures={formSignatures}
+            currentUserRole={user.role}
+            currentUser={user}
+            studentProfile={getStudentProfile(user.id)}
+            onFieldChange={(fieldId, value) => {
+              setFormData(prev => ({ ...prev, [fieldId]: value }));
+              // Clear validation error on change
+              if (formValidationErrors[fieldId]) {
+                setFormValidationErrors(prev => { const next = { ...prev }; delete next[fieldId]; return next; });
+              }
+              // Persist to Firestore if we have a submission
+              if (activeFormSubmission?.id) {
+                updateFormSubmissionData(activeFormSubmission.id, fieldId, value).catch(console.error);
+              }
+            }}
+            onSectionSign={(sectionId, sigData) => {
+              setFormSignatures(prev => ({ ...prev, [sectionId]: sigData }));
+            }}
+            onSectionComplete={async (sectionId) => {
+              setFormSectionStatuses(prev => ({ ...prev, [sectionId]: 'completed' }));
+              if (activeFormSubmission?.id) {
+                await completeFormSection(activeFormSubmission.id, sectionId, user.id, formSignatures[sectionId]).catch(console.error);
+              }
+            }}
+            onSectionReferBack={async (sectionId, comment) => {
+              setFormSectionStatuses(prev => ({ ...prev, [sectionId]: 'referred_back' }));
+              if (activeFormSubmission?.id) {
+                await referBackFormSection(activeFormSubmission.id, sectionId, user.id, comment).catch(console.error);
+              }
+            }}
+            onSubmit={async () => {
+              try {
+                // Resolve supervisor and coordinator
+                const profile = getStudentProfile(user.id);
+                const supervisorId = selectedSupervisor?.id || profile?.supervisorId;
+                const coordinatorId = selectedCoordinator?.id || mockUsers.find(u => u.role === 'coordinator')?.id;
+
+                if (!supervisorId) {
+                  showToast('Please select a supervisor before submitting.', 'error');
+                  setShowSupervisorPicker(true);
+                  return;
+                }
+
+                // Create submission if not yet created
+                let submissionId = activeFormSubmission?.id;
+                if (!submissionId) {
+                  const sub = await createFormSubmission({
+                    templateId: activeFormTemplate.slug,
+                    templateName: activeFormTemplate.name,
+                    initiatorId: user.id,
+                    initiatorName: user.name,
+                    studentId: user.role === 'student' ? user.id : null,
+                    data: formData,
+                    sectionStatuses: formSectionStatuses,
+                    signatures: formSignatures,
+                  });
+                  submissionId = sub.id;
+                  setActiveFormSubmission(sub);
+                } else {
+                  await updateFormSubmissionStatus(submissionId, 'submitted');
+                }
+
+                // Also create a legacy HD request for workflow tracking
+                const req = await createHDRequest({
+                  type: activeFormTemplate.slug,
+                  title: `${activeFormTemplate.name} – ${user.name}`,
+                  description: `Form submission for ${activeFormTemplate.name}`,
+                  studentId: user.id,
+                  studentName: user.name,
+                  supervisorId: supervisorId,
+                  coordinatorId: coordinatorId || 'coordinator-001',
+                  formSubmissionId: submissionId,
+                });
+
+                // Link submission to request
+                await linkFormSubmission(submissionId, req.id);
+
+                // Email: notify supervisor of new form submission
+                const supervisor = getUserById(supervisorId);
+                if (supervisor?.email) {
+                  sendRequestSubmittedEmail(supervisor.email, supervisor.name, activeFormTemplate.name, user.name).catch(() => {});
+                }
+
+                showToast(`"${activeFormTemplate.name}" submitted successfully.`);
+                setActiveFormTemplate(null);
+                setActiveFormSubmission(null);
+                setSelectedSupervisor(null);
+                setSelectedCoordinator(null);
+              } catch (err) {
+                console.error('Form submission error:', err);
+                showToast('Failed to submit form', 'error');
+              }
+            }}
+            validationErrors={formValidationErrors}
+          />
+          </>
+        )}
+      </Modal>
+
+      {/* ── Supervisor Picker ── */}
+      <UserPicker
+        isOpen={showSupervisorPicker}
+        onClose={() => setShowSupervisorPicker(false)}
+        onSelect={(u) => { setSelectedSupervisor(u); setShowSupervisorPicker(false); }}
+        users={mockUsers}
+        title="Select Supervisor"
+        roleFilter={['supervisor']}
+        excludeIds={[user.id]}
+        selectedId={selectedSupervisor?.id}
+      />
+
+      {/* ── Coordinator Picker ── */}
+      <UserPicker
+        isOpen={showCoordinatorPicker}
+        onClose={() => setShowCoordinatorPicker(false)}
+        onSelect={(u) => { setSelectedCoordinator(u); setShowCoordinatorPicker(false); }}
+        users={mockUsers}
+        title="Select Coordinator"
+        roleFilter={['coordinator', 'admin']}
+        excludeIds={[user.id]}
+        selectedId={selectedCoordinator?.id}
+      />
     </div>
   );
 }
@@ -841,97 +1125,76 @@ function FileUploadZone({ files, onChange, hint, accept }) {
   );
 }
 
-/* ── New Request Modal ── */
-function NewRequestModal({ isOpen, onClose, user, onCreated }) {
-  const { createHDRequest, getStudentProfile } = useData();
-  const [selectedType, setSelectedType] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [files, setFiles] = useState([]);
-  const [creating, setCreating] = useState(false);
+/* ── Template Selection Modal ── */
+function TemplateSelectionModal({ isOpen, onClose, user, formTemplates, onSelectTemplate }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const requestTypes = [
-    { key: 'title_registration', label: 'Title Registration', icon: <HiOutlineDocumentText /> },
-    { key: 'registration', label: 'Registration', icon: <HiOutlinePlusCircle /> },
-    { key: 'progress_report', label: 'Progress Report', icon: <HiOutlineArrowPath /> },
-    { key: 'extension', label: 'Extension', icon: <HiOutlineClock /> },
-    { key: 'leave_of_absence', label: 'Leave of Absence', icon: <HiOutlineClock /> },
-    { key: 'examination_entry', label: 'Examination Entry', icon: <HiOutlineCheckCircle /> },
-    { key: 'supervisor_change', label: 'Supervisor Change', icon: <HiOutlinePencilSquare /> },
-  ];
+  // Combine Firestore templates with prebuilt ones (prebuilt as fallback)
+  const allTemplates = useMemo(() => {
+    const fsMap = new Map(formTemplates.map(t => [t.slug, t]));
+    const combined = [];
+    // Firestore templates take priority
+    formTemplates.forEach(t => combined.push(t));
+    // Add prebuilt templates not in Firestore
+    ALL_PREBUILT_TEMPLATES.forEach(t => {
+      if (!fsMap.has(t.slug)) combined.push(t);
+    });
+    return combined;
+  }, [formTemplates]);
 
-  const handleClose = () => { setSelectedType(''); setTitle(''); setDescription(''); setFiles([]); onClose(); };
+  // Filter by role – only show templates this role can initiate
+  const available = useMemo(() => {
+    return allTemplates.filter(t => {
+      if (!t.initiatorRoles?.includes(user.role) && user.role !== 'admin') return false;
+      const matchSearch = !searchTerm || t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCategory = selectedCategory === 'all' || t.category === selectedCategory;
+      return matchSearch && matchCategory;
+    });
+  }, [allTemplates, user.role, searchTerm, selectedCategory]);
 
-  const handleCreate = async () => {
-    if (!selectedType || !title.trim() || creating) return;
-    setCreating(true);
-    try {
-      const profile = getStudentProfile(user.id);
+  const categories = [...new Set(allTemplates.map(t => t.category).filter(Boolean))];
 
-      // Upload files to Firebase Storage first
-      let uploadedDocs = [];
-      if (files.length > 0) {
-        const tempId = `temp_${Date.now()}`;
-        const uploadedFiles = await uploadRequestFiles(files, tempId, 'documents');
-        uploadedDocs = uploadedFiles.map(f => ({
-          name: f.name,
-          size: `${(f.size / 1024).toFixed(0)} KB`,
-          url: f.url,
-          path: f.path,
-          uploadedAt: new Date(),
-        }));
-      }
-
-      const req = await createHDRequest({
-        type: selectedType, title, description,
-        studentId: user.id,
-        studentName: user.name,
-        supervisorId: profile?.supervisorId || 'supervisor-001',
-        coordinatorId: 'coordinator-001',
-        documents: uploadedDocs,
-      });
-      onCreated?.(req);
-      handleClose();
-    } catch (err) {
-      console.error('Create request error:', err);
-    } finally {
-      setCreating(false);
-    }
-  };
+  const handleClose = () => { setSearchTerm(''); setSelectedCategory('all'); onClose(); };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="New Higher Degrees Request" large
-      footer={
-        <>
-          <button className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={!selectedType || !title.trim() || creating} onClick={handleCreate}>
-            <HiOutlinePlusCircle /> {creating ? 'Creating…' : 'Create Request'}
-          </button>
-        </>
-      }
-    >
-      <div>
-        <div className="form-label" style={{ marginBottom: 12 }}>Select request type</div>
-        <div className="new-request-type-grid">
-          {requestTypes.map((t) => (
-            <div key={t.key} className={`new-request-type-card ${selectedType === t.key ? 'selected' : ''}`} onClick={() => setSelectedType(t.key)}>
-              <div style={{ fontSize: 24, color: selectedType === t.key ? 'var(--uwc-navy)' : 'var(--text-tertiary)' }}>{t.icon}</div>
-              <h4>{t.label}</h4>
+    <Modal isOpen={isOpen} onClose={handleClose} title="Select Form Template" large>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <div className="search-container" style={{ flex: 1 }}>
+            <HiOutlineMagnifyingGlass className="search-icon" />
+            <input className="search-input" placeholder="Search templates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+          <select className="form-select" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ width: 'auto', minWidth: 150 }}>
+            <option value="all">All categories</option>
+            {categories.map(c => (
+              <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="new-request-type-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        {available.length === 0 ? (
+          <EmptyState icon={<HiOutlineDocumentText />} title="No templates available" description="No form templates match your search or role." />
+        ) : (
+          available.map((t) => (
+            <div
+              key={t.slug}
+              className="new-request-type-card"
+              onClick={() => { onSelectTemplate(t); handleClose(); }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div style={{ fontSize: 24, color: 'var(--uwc-navy)' }}><HiOutlineDocumentText /></div>
+              <h4 style={{ fontSize: 13, margin: '6px 0 2px' }}>{t.name}</h4>
+              {t.description && <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{t.description}</p>}
+              {t.category && (
+                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, background: 'var(--bg-muted)', color: 'var(--text-tertiary)', marginTop: 4, display: 'inline-block' }}>
+                  {t.category}
+                </span>
+              )}
             </div>
-          ))}
-        </div>
-        <div className="form-group">
-          <label className="form-label">Request Title</label>
-          <input className="form-input" placeholder="Enter a descriptive title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Description</label>
-          <textarea className="form-textarea" placeholder="Provide details for your request..." rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Supporting Documents</label>
-          <FileUploadZone files={files} onChange={setFiles} hint="Upload research proposals, ethics clearance, progress reports, or other supporting documents" />
-        </div>
+          ))
+        )}
       </div>
     </Modal>
   );

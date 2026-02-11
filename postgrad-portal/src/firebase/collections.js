@@ -12,4 +12,6 @@ export const COLLECTIONS = {
   AUDIT_LOGS: 'auditLogs',
   DOCUMENT_VERSIONS: 'documentVersions',
   ANNOTATIONS: 'annotations',
+  FORM_TEMPLATES: 'formTemplates',
+  FORM_SUBMISSIONS: 'formSubmissions',
 };

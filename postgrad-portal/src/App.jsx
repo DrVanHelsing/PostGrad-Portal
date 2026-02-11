@@ -22,6 +22,7 @@ import AcademicProgressPage from './pages/AcademicProgressPage';
 import DocumentReviewPage from './pages/DocumentReviewPage';
 import HelpPage from './pages/HelpPage';
 import SeedPage from './pages/SeedPage';
+import FormBuilderPage from './pages/FormBuilderPage';
 
 function AuthLoadingScreen() {
   return (
@@ -55,6 +56,16 @@ function AppRoutes() {
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+      />
+
+      {/* Full-screen Form Builder (outside Layout – no sidebar/header) */}
+      <Route
+        path="/form-builder"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <FormBuilderPage />
+          </ProtectedRoute>
+        }
       />
 
       {/* Protected layout */}

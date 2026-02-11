@@ -5,7 +5,7 @@
 import { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Card, CardBody, Avatar, EmptyState, Modal } from '../components/common';
-import { ROLE_LABELS } from '../utils/constants';
+import { ROLE_LABELS, CREATABLE_ROLES } from '../utils/constants';
 import { firebaseConfig } from '../firebase/config';
 import {
   HiOutlineUserGroup,
@@ -22,7 +22,7 @@ export default function RoleManagementPage() {
   const [toast, setToast] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', role: 'student', department: '' });
+  const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', role: 'student', department: '', organization: '' });
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };
 
   const users = useMemo(() =>
@@ -56,16 +56,22 @@ export default function RoleManagementPage() {
       if (data.error) throw new Error(data.error.message);
 
       // 2. Create Firestore user doc
-      await createUserDoc(data.localId, {
+      const userDocData = {
         name: createForm.name,
         email: createForm.email,
         role: createForm.role,
         department: createForm.department || 'General',
-      });
+      };
+      // Mark external users with metadata
+      if (createForm.role === 'external' || createForm.role === 'examiner') {
+        userDocData.isExternal = true;
+        userDocData.organization = createForm.organization || '';
+      }
+      await createUserDoc(data.localId, userDocData);
 
       showToast(`User ${createForm.name} created successfully`);
       setShowCreateModal(false);
-      setCreateForm({ name: '', email: '', password: '', role: 'student', department: '' });
+      setCreateForm({ name: '', email: '', password: '', role: 'student', department: '', organization: '' });
     } catch (err) {
       console.error('Create user error:', err);
       const msg = err.message?.includes('EMAIL_EXISTS') ? 'Email already exists' : err.message || 'Failed to create user';
@@ -102,7 +108,7 @@ export default function RoleManagementPage() {
           <HiOutlineMagnifyingGlass className="search-icon" />
           <input className="search-input" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        {['all', 'student', 'supervisor', 'coordinator', 'admin'].map(r => (
+        {['all', ...Object.keys(ROLE_LABELS)].map(r => (
           <button key={r} className={`filter-chip ${roleFilter === r ? 'active' : ''}`} onClick={() => setRoleFilter(r)}>
             {r === 'all' ? 'All' : ROLE_LABELS[r]}
           </button>
@@ -145,10 +151,11 @@ export default function RoleManagementPage() {
                           borderRadius: 'var(--radius-full)',
                           fontSize: 12,
                           fontWeight: 600,
-                          color: 'var(--uwc-navy)',
-                          background: 'rgba(0,51,102,0.06)',
+                          color: u.isExternal ? 'var(--status-teal)' : 'var(--uwc-navy)',
+                          background: u.isExternal ? 'var(--status-teal-bg)' : 'rgba(0,51,102,0.06)',
                         }}>
-                          {ROLE_LABELS[u.role]}
+                          {ROLE_LABELS[u.role] || u.role}
+                          {u.isExternal && ' (Ext)'}
                         </span>
                       </td>
                       <td>
@@ -204,7 +211,7 @@ export default function RoleManagementPage() {
           <div className="form-group">
             <label className="form-label">Role</label>
             <select className="form-select" value={createForm.role} onChange={e => setCreateForm({ ...createForm, role: e.target.value })}>
-              {Object.entries(ROLE_LABELS).map(([k, v]) => (
+              {Object.entries(CREATABLE_ROLES).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
@@ -214,6 +221,15 @@ export default function RoleManagementPage() {
             <input className="form-input" placeholder="e.g. Computer Science" value={createForm.department} onChange={e => setCreateForm({ ...createForm, department: e.target.value })} />
           </div>
         </div>
+        {(createForm.role === 'external' || createForm.role === 'examiner') && (
+          <div className="form-group">
+            <label className="form-label">Organization / Affiliation</label>
+            <input className="form-input" placeholder="e.g. University of Stellenbosch" value={createForm.organization} onChange={e => setCreateForm({ ...createForm, organization: e.target.value })} />
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+              External users can log in and fill forms assigned to their role.
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

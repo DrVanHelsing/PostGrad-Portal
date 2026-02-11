@@ -3,9 +3,10 @@
 // ============================================
 
 import './common.css';
+import { createPortal } from 'react-dom';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS } from '../../utils/constants';
 import { getInitials } from '../../utils/helpers';
-import { HiXMark } from 'react-icons/hi2';
+import { HiXMark, HiArrowsPointingOut, HiArrowsPointingIn } from 'react-icons/hi2';
 
 /* ── StatusBadge ── */
 export function StatusBadge({ status, config }) {
@@ -65,21 +66,32 @@ export function CardBody({ flush, children, className = '' }) {
 }
 
 /* ── Modal ── */
-export function Modal({ isOpen, onClose, title, children, footer, large }) {
+export function Modal({ isOpen, onClose, title, children, footer, large, fullscreen, onToggleFullscreen }) {
   if (!isOpen) return null;
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className={`modal ${large ? 'modal-lg' : ''}`} onClick={(e) => e.stopPropagation()}>
+  const cls = ['modal'];
+  if (large) cls.push('modal-lg');
+  if (fullscreen) cls.push('modal-fullscreen');
+  return createPortal(
+    <div className={`modal-overlay ${fullscreen ? 'modal-overlay-fullscreen' : ''}`} onClick={onClose}>
+      <div className={cls.join(' ')} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
-            <HiXMark />
-          </button>
+          <div className="modal-header-actions">
+            {onToggleFullscreen && (
+              <button className="modal-close" onClick={onToggleFullscreen} aria-label={fullscreen ? 'Exit full screen' : 'Full screen'} title={fullscreen ? 'Exit full screen' : 'Full screen'}>
+                {fullscreen ? <HiArrowsPointingIn /> : <HiArrowsPointingOut />}
+              </button>
+            )}
+            <button className="modal-close" onClick={onClose} aria-label="Close">
+              <HiXMark />
+            </button>
+          </div>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

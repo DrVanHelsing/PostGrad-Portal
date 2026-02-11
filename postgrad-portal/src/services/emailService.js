@@ -169,3 +169,89 @@ export function sendDeadlineReminderEmail(recipientEmail, recipientName, request
     actionText: 'Take Action',
   });
 }
+
+// ══════════════════════════════════════════════════
+// Form-System Notification Helpers
+// ══════════════════════════════════════════════════
+
+/** Notify next role when a section is completed and their section is now unlocked */
+export function sendSectionHandoffEmail(recipientEmail, recipientName, formName, sectionTitle, completedByName) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `Action Required: ${formName} – ${sectionTitle}`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `${completedByName} has completed their section of "${formName}".\n\n` +
+      `The "${sectionTitle}" section is now ready for your input. Please log in to the PostGrad Portal to complete your section.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'Complete Section',
+  });
+}
+
+/** Notify when a section is referred back to a previous role */
+export function sendSectionReferBackEmail(recipientEmail, recipientName, formName, sectionTitle, referredByName, reason) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `Section Referred Back: ${formName}`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `${referredByName} has referred back the "${sectionTitle}" section of "${formName}".\n\n` +
+      (reason ? `Reason: ${reason}\n\n` : '') +
+      `Please log in to the PostGrad Portal to review and revise your section.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'Review Feedback',
+  });
+}
+
+/** Notify when a linked form is required (e.g. Examiner CV after Appointment of Examiners) */
+export function sendLinkedFormRequiredEmail(recipientEmail, recipientName, requiredFormName, parentFormName) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `Additional Form Required: ${requiredFormName}`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `The submission of "${parentFormName}" requires a linked form: "${requiredFormName}".\n\n` +
+      `Please log in to the PostGrad Portal to complete this additional form.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'Open Form',
+  });
+}
+
+/** Notify all parties when a form is fully completed */
+export function sendFormCompletionEmail(recipientEmail, recipientName, formName, studentName, referenceNumber) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `Form Completed: ${formName}`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `The form "${formName}" for ${studentName} has been fully completed by all parties.\n\n` +
+      (referenceNumber ? `Reference: ${referenceNumber}\n\n` : '') +
+      `The signed document is now available for download in the PostGrad Portal.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'View Document',
+  });
+}
+
+/** Escalation when a section is overdue */
+export function sendEscalationEmail(recipientEmail, recipientName, formName, sectionTitle, assigneeName, daysOverdue) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `Escalation: ${formName} – Section Overdue`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `The "${sectionTitle}" section of "${formName}" (assigned to ${assigneeName}) is ${daysOverdue} day(s) overdue.\n\n` +
+      `Please follow up or reassign this action.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'View Details',
+  });
+}
