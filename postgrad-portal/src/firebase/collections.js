@@ -14,4 +14,5 @@ export const COLLECTIONS = {
   ANNOTATIONS: 'annotations',
   FORM_TEMPLATES: 'formTemplates',
   FORM_SUBMISSIONS: 'formSubmissions',
+  THESIS_SUBMISSIONS: 'thesisSubmissions',
 };

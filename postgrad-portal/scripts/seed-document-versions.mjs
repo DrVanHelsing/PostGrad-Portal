@@ -8,12 +8,12 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, Timestamp } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBu7YrBJg_eNGqUlXIGCzNltScSQKYLp28',
-  authDomain: 'pg-portal1.firebaseapp.com',
-  projectId: 'pg-portal1',
-  storageBucket: 'pg-portal1.firebasestorage.app',
-  messagingSenderId: '757138632732',
-  appId: '1:757138632732:web:b564e133fba3a6f8862fd9',
+  apiKey: 'AIzaSyBCy59swYINVaEgfPy2XqP6U5nLs8qbadY',
+  authDomain: 'postgrad-portal.firebaseapp.com',
+  projectId: 'postgrad-portal',
+  storageBucket: 'postgrad-portal.firebasestorage.app',
+  messagingSenderId: '1074199423382',
+  appId: '1:1074199423382:web:1a93b580f2c268dfd955b7',
 };
 
 const app = initializeApp(firebaseConfig);

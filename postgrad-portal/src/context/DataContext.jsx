@@ -11,6 +11,7 @@ import {
   subscribeToFormSubmissions,
   createFormSubmission as fsCreateFormSubmission,
   updateFormSubmissionData as fsUpdateFormSubmissionData,
+  updateFormSubmissionAttachments as fsUpdateFormSubmissionAttachments,
   completeFormSection as fsCompleteFormSection,
   referBackFormSection as fsReferBackFormSection,
   updateFormSubmissionStatus as fsUpdateFormSubmissionStatus,
@@ -44,8 +45,10 @@ import {
   deleteMilestoneDoc as fsDeleteMilestone,
   createUserDoc as fsCreateUserDoc,
   deleteUserDoc as fsDeleteUserDoc,
+  updateUserDoc as fsUpdateUserDoc,
   updateRequestDocUrls as fsUpdateRequestDocUrls,
   checkOverdueRequests,
+  checkReferralNotifications,
   addCalendarEventDoc,
   updateCalendarEventDoc,
   deleteCalendarEventDoc,
@@ -53,6 +56,8 @@ import {
   addNotificationDoc,
   markNotificationsRead as fsMarkNotificationsRead,
   markNotificationRead as fsMarkNotificationRead,
+  createStudentProfile as fsCreateStudentProfile,
+  generateTemporaryPassword,
   // Utilities
   generateAccessCode,
   exportToCSV,
@@ -75,13 +80,30 @@ export function DataProvider({ children }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [formTemplates, setFormTemplates] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
+  const [thesisSubmissions, setThesisSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   /* ── Subscribe to collections on mount ── */
   useEffect(() => {
+    if (!user?.id) {
+      setUsers([]);
+      setHDRequests([]);
+      setCalendarEvents([]);
+      setMilestones([]);
+      setStudentProfiles([]);
+      setAuditLogs([]);
+      setFormTemplates([]);
+      setFormSubmissions([]);
+      setThesisSubmissions([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     const unsubs = [];
     let snapCount = 0;
-    const totalSnaps = 8; // number of collection subscriptions
+    const isStaffUser = user?.role === 'admin' || user?.role === 'coordinator';
+    const totalSnaps = isStaffUser ? 9 : 8; // number of active collection subscriptions
     const markReady = () => { snapCount++; if (snapCount >= totalSnaps) setLoading(false); };
 
     unsubs.push(subscribeToCollection(COLLECTIONS.USERS, (d) => { setUsers(d); markReady(); }));
@@ -89,9 +111,14 @@ export function DataProvider({ children }) {
     unsubs.push(subscribeToCollection(COLLECTIONS.CALENDAR_EVENTS, (d) => { setCalendarEvents(d); markReady(); }));
     unsubs.push(subscribeToCollection(COLLECTIONS.MILESTONES, (d) => { setMilestones(d); markReady(); }));
     unsubs.push(subscribeToCollection(COLLECTIONS.STUDENT_PROFILES, (d) => { setStudentProfiles(d); markReady(); }));
-    unsubs.push(subscribeToCollection(COLLECTIONS.AUDIT_LOGS, (d) => { setAuditLogs(d); markReady(); }, [orderBy('timestamp', 'desc')]));
+    if (isStaffUser) {
+      unsubs.push(subscribeToCollection(COLLECTIONS.AUDIT_LOGS, (d) => { setAuditLogs(d); markReady(); }, [orderBy('timestamp', 'desc')]));
+    } else {
+      setAuditLogs([]);
+    }
     unsubs.push(subscribeToFormTemplates((d) => { setFormTemplates(d); markReady(); }));
     unsubs.push(subscribeToFormSubmissions((d) => { setFormSubmissions(d); markReady(); }));
+    unsubs.push(subscribeToCollection(COLLECTIONS.THESIS_SUBMISSIONS, (d) => { setThesisSubmissions(d); markReady(); }));
 
     // Fallback – if snapshots haven't all arrived in 5s, show the app anyway
     const fallback = setTimeout(() => setLoading(false), 5000);
@@ -100,7 +127,7 @@ export function DataProvider({ children }) {
       unsubs.forEach(fn => fn());
       clearTimeout(fallback);
     };
-  }, []);
+  }, [user?.id, user?.role]);
 
   /* ── Subscribe to user-specific notifications ── */
   useEffect(() => {
@@ -264,7 +291,15 @@ export function DataProvider({ children }) {
     []
   );
   const deleteUserDoc = useCallback(
-    (userId) => fsDeleteUserDoc(userId),
+    (userId) => fsDeleteUserDoc(userId, user),
+    [user]
+  );
+  const updateUserDoc = useCallback(
+    (userId, updates) => fsUpdateUserDoc(userId, updates, user),
+    [user]
+  );
+  const createStudentProfile = useCallback(
+    (profileData) => fsCreateStudentProfile(profileData),
     []
   );
   const updateRequestDocUrls = useCallback(
@@ -279,6 +314,10 @@ export function DataProvider({ children }) {
   );
   const updateFormSubmissionData = useCallback(
     (submissionId, fieldId, value) => fsUpdateFormSubmissionData(submissionId, fieldId, value),
+    []
+  );
+  const updateFormSubmissionAttachments = useCallback(
+    (submissionId, attachments) => fsUpdateFormSubmissionAttachments(submissionId, attachments),
     []
   );
   const completeFormSection = useCallback(
@@ -328,6 +367,40 @@ export function DataProvider({ children }) {
     [formSubmissions]
   );
 
+  /* ── Thesis Submission helpers ── */
+  const getThesisSubmissionsByStudent = useCallback(
+    (studentId) => thesisSubmissions.filter(t => t.studentId === studentId),
+    [thesisSubmissions]
+  );
+
+  const getThesisSubmissionsForSupervisor = useCallback(
+    (supervisorId) => thesisSubmissions.filter(t =>
+      t.supervisorId === supervisorId || t.coSupervisorId === supervisorId
+    ),
+    [thesisSubmissions]
+  );
+
+  const getThesisSubmissionById = useCallback(
+    (id) => thesisSubmissions.find(t => t.id === id),
+    [thesisSubmissions]
+  );
+
+  const createThesisSubmission = useCallback(async (data) => {
+    const { doc: fbDoc, setDoc: fbSetDoc, Timestamp } = await import('firebase/firestore');
+    const { db } = await import('../firebase/config');
+    const id = `thesis-${Date.now()}`;
+    const now = Timestamp.now();
+    const docData = { ...data, createdAt: now, updatedAt: now, currentVersion: 1, status: 'submitted' };
+    await fbSetDoc(fbDoc(db, COLLECTIONS.THESIS_SUBMISSIONS, id), docData);
+    return { id, ...docData };
+  }, []);
+
+  const updateThesisSubmission = useCallback(async (id, updates) => {
+    const { doc: fbDoc, updateDoc, Timestamp } = await import('firebase/firestore');
+    const { db } = await import('../firebase/config');
+    await updateDoc(fbDoc(db, COLLECTIONS.THESIS_SUBMISSIONS, id), { ...updates, updatedAt: Timestamp.now() });
+  }, []);
+
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.read).length,
     [notifications]
@@ -353,8 +426,13 @@ export function DataProvider({ children }) {
             );
           }
         }
+        // 48-hour referral notification check
+        const referralAlerts = await checkReferralNotifications(hdRequests, users);
+        if (referralAlerts.length > 0) {
+          console.log(`[DataContext] ${referralAlerts.length} referral(s) overdue 48h+`);
+        }
       } catch (err) {
-        console.error('Deadline reminder check failed:', err);
+        console.error('Deadline/referral reminder check failed:', err);
       }
     })();
   }, [loading, user?.id, hdRequests, users]);
@@ -373,6 +451,7 @@ export function DataProvider({ children }) {
     mockAuditLogs: auditLogs,
     formTemplates,
     formSubmissions,
+    thesisSubmissions,
 
     // Query functions
     getRequestsByStudent,
@@ -422,12 +501,16 @@ export function DataProvider({ children }) {
     deleteMilestone,
     createUserDoc,
     deleteUserDoc,
+    updateUserDoc,
+    createStudentProfile,
     updateRequestDocUrls,
     checkOverdueRequests: (reqs) => checkOverdueRequests(reqs, users),
+    generateTemporaryPassword,
 
     // Form template & submission operations
     createFormSubmission,
     updateFormSubmissionData,
+    updateFormSubmissionAttachments,
     completeFormSection,
     referBackFormSection,
     updateFormSubmissionStatus,
@@ -440,6 +523,13 @@ export function DataProvider({ children }) {
     getFormTemplateBySlug,
     getFormSubmissionsForRequest,
 
+    // Thesis submissions
+    getThesisSubmissionsByStudent,
+    getThesisSubmissionsForSupervisor,
+    getThesisSubmissionById,
+    createThesisSubmission,
+    updateThesisSubmission,
+
     // Utilities
     generateAccessCode,
     exportToCSV,
@@ -447,7 +537,7 @@ export function DataProvider({ children }) {
   }), [
     loading, users, hdRequests, calendarEvents, milestones, notifications,
     studentProfiles, auditLogs, unreadCount,
-    formTemplates, formSubmissions,
+    formTemplates, formSubmissions, thesisSubmissions,
     getRequestsByStudent, getRequestsForSupervisor, getRequestsForCoordinator,
     getNotificationsForUser, getStudentProfile, getStudentsForSupervisor, getUserById, getUsersByRole,
     createHDRequest, submitToSupervisor, validateAccessCode,
@@ -458,12 +548,14 @@ export function DataProvider({ children }) {
     addMilestone, addNotification,
     markAllNotificationsRead, markOneNotificationRead,
     updateDraftRequest, updateUserProfileFn, updateMilestone, deleteMilestone,
-    createUserDoc, deleteUserDoc, updateRequestDocUrls,
+    createUserDoc, deleteUserDoc, updateUserDoc, createStudentProfile, updateRequestDocUrls,
     createFormSubmission, updateFormSubmissionData, completeFormSection,
-    referBackFormSection, updateFormSubmissionStatus, linkFormSubmission,
+    updateFormSubmissionAttachments, referBackFormSection, updateFormSubmissionStatus, linkFormSubmission,
     setFormTemplate, updateFormTemplate, publishFormTemplate,
     archiveFormTemplate, duplicateFormTemplate,
     getFormTemplateBySlug, getFormSubmissionsForRequest,
+    getThesisSubmissionsByStudent, getThesisSubmissionsForSupervisor, getThesisSubmissionById,
+    createThesisSubmission, updateThesisSubmission,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

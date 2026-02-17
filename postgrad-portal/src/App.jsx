@@ -11,18 +11,17 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import HDRequestsPage from './pages/HDRequestsPage';
-import SubmissionTracker from './pages/SubmissionTracker';
-import CalendarPage from './pages/CalendarPage';
+import ProgressTrackerPage from './pages/ProgressTrackerPage';
 import StudentsPage from './pages/StudentsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import RoleManagementPage from './pages/RoleManagementPage';
-import AcademicProgressPage from './pages/AcademicProgressPage';
 import DocumentReviewPage from './pages/DocumentReviewPage';
 import HelpPage from './pages/HelpPage';
 import SeedPage from './pages/SeedPage';
 import FormBuilderPage from './pages/FormBuilderPage';
+import SubmissionsPage from './pages/SubmissionsPage';
 
 function AuthLoadingScreen() {
   return (
@@ -36,8 +35,12 @@ function AuthLoadingScreen() {
 }
 
 function ProtectedRoute({ children, allowedRoles }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, mustChangePassword } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  /* Force first-login users to Settings to change their password */
+  if (mustChangePassword && window.location.pathname !== '/settings') {
+    return <Navigate to="/settings" replace />;
+  }
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -78,22 +81,25 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/requests" element={<HDRequestsPage />} />
+        <Route
+          path="/submissions"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'supervisor', 'coordinator', 'admin']}>
+              <SubmissionsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/requests/:requestId/review" element={<DocumentReviewPage />} />
-        <Route path="/tracker" element={<SubmissionTracker />} />
-        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/progress-tracker" element={<ProgressTrackerPage />} />
+        {/* Legacy redirects */}
+        <Route path="/tracker" element={<Navigate to="/progress-tracker" replace />} />
+        <Route path="/calendar" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/progress" element={<Navigate to="/progress-tracker" replace />} />
         <Route
           path="/students"
           element={
             <ProtectedRoute allowedRoles={['supervisor', 'coordinator', 'admin']}>
               <StudentsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/progress"
-          element={
-            <ProtectedRoute allowedRoles={['student']}>
-              <AcademicProgressPage />
             </ProtectedRoute>
           }
         />

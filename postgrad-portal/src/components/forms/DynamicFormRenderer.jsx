@@ -82,9 +82,9 @@ export default function DynamicFormRenderer({
   const visibleSections = useMemo(() => {
     if (!template?.sections) return [];
     return template.sections
-      .filter((s) => !s.conditionalOn || evaluateCondition(s.conditionalOn, formData))
+      .filter((s) => !s.conditionalOn || evaluateCondition(s.conditionalOn, formData, studentProfile))
       .sort((a, b) => a.order - b.order);
-  }, [template, formData]);
+  }, [template, formData, studentProfile]);
 
   /* ── Overall progress ── */
   const progress = useMemo(() => {
@@ -435,8 +435,25 @@ function resolveAutoPopulate(config, currentUser, studentProfile) {
 }
 
 
-export function evaluateCondition(condition, formData) {
+export function evaluateCondition(condition, formData, studentProfile) {
   if (!condition) return true;
+
+  /* ── Student-profile-based conditions (e.g. Section C year threshold) ── */
+  if (condition.source === 'studentProfile') {
+    if (!studentProfile) return false;
+    if (condition.operator === 'year_threshold') {
+      const degree = (studentProfile[condition.degreeField] || '').toLowerCase();
+      const years = Number(studentProfile[condition.yearField]) || 0;
+      const isMsc = degree.startsWith('msc') || degree === 'ma' || degree === 'mcom';
+      const isPhd = degree === 'phd' || degree === 'dphil';
+      if (isMsc) return years >= (condition.mscYear || 3);
+      if (isPhd) return years >= (condition.phdYear || 5);
+      return false;
+    }
+    return true;
+  }
+
+  /* ── Standard field-based conditions ── */
   const { fieldId, operator, value } = condition;
   const fieldValue = formData[fieldId];
 

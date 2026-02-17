@@ -1,11 +1,12 @@
 // ============================================
-// Admin Dashboard – with Analytics + Role Management + Export
+// Admin Dashboard – Analytics, Role Management, Export, Calendar widget
 // ============================================
 
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, EmptyState } from '../../components/common';
+import CalendarWidget from '../../components/CalendarWidget';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, ROLE_LABELS } from '../../utils/constants';
 import { formatDate, formatDateTime, formatRelativeTime, groupBy } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -50,9 +51,9 @@ export default function AdminDashboard() {
     const data = mockStudentProfiles.map(s => {
       const sup = getUserById(s.supervisorId);
       const coSup = s.coSupervisorId ? getUserById(s.coSupervisorId) : null;
-      return { 'Student Number': s.studentNumber, Name: getUserById(s.userId)?.name || '—', Programme: s.programme, Degree: s.degree, Department: s.department, Supervisor: sup?.name || '—', 'Co-Supervisor': coSup?.name || '—', Status: s.status, 'Year': s.yearsRegistered };
+      return { 'Student Number': s.studentNumber, Name: getUserById(s.userId)?.name || '—', Programme: s.programme, Degree: s.degree, Supervisor: sup?.name || '—', 'Co-Supervisor': coSup?.name || '—', Status: s.status, 'Year': s.yearsRegistered };
     });
-    const csv = exportToCSV(data, ['Student Number', 'Name', 'Programme', 'Degree', 'Department', 'Supervisor', 'Co-Supervisor', 'Status', 'Year']);
+    const csv = exportToCSV(data, ['Student Number', 'Name', 'Programme', 'Degree', 'Supervisor', 'Co-Supervisor', 'Status', 'Year']);
     downloadCSV(csv, 'all-students.csv');
     showToast('Students exported');
   };
@@ -61,9 +62,9 @@ export default function AdminDashboard() {
     const supervisors = mockUsers.filter(u => u.role === 'supervisor');
     const data = supervisors.map(s => {
       const studentCount = mockStudentProfiles.filter(p => p.supervisorId === s.id || p.coSupervisorId === s.id).length;
-      return { Name: s.name, Email: s.email, Department: s.department, 'Students Supervised': studentCount };
+      return { Name: s.name, Email: s.email, 'Students Supervised': studentCount };
     });
-    const csv = exportToCSV(data, ['Name', 'Email', 'Department', 'Students Supervised']);
+    const csv = exportToCSV(data, ['Name', 'Email', 'Students Supervised']);
     downloadCSV(csv, 'all-supervisors.csv');
     showToast('Supervisors exported');
   };
@@ -75,7 +76,7 @@ export default function AdminDashboard() {
       <div className="dashboard-welcome" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1>Administration Dashboard</h1>
-          <p>{user.department} | System Overview</p>
+          <p>System Overview</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-secondary btn-sm" onClick={handleExport}><HiOutlineArrowDownTray /> Export Requests</button>
@@ -168,6 +169,9 @@ export default function AdminDashboard() {
             ))}
           </CardBody>
         </Card>
+
+        {/* Calendar widget with admin event management + user targeting */}
+        <CalendarWidget showManage showTargetUsers />
       </div>
     </div>
   );

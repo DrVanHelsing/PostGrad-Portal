@@ -60,6 +60,34 @@ export function generateAccessCode() {
   return code;
 }
 
+function resolveCoordinatorId(allUsers, requestedCoordinatorId, context = {}) {
+  if (requestedCoordinatorId && allUsers?.some(u => u.id === requestedCoordinatorId)) {
+    return requestedCoordinatorId;
+  }
+
+  const coordinators = (allUsers || []).filter(u => u.role === 'coordinator');
+  if (coordinators.length === 0) return requestedCoordinatorId || 'coordinator-001';
+  if (coordinators.length === 1) return coordinators[0].id;
+
+  const normalize = (value) => String(value || '').trim().toLowerCase();
+  const department = normalize(context.studentDepartment);
+  const faculty = normalize(context.studentFaculty);
+  const programme = normalize(context.studentProgramme);
+
+  const scored = coordinators.map((coordinator) => {
+    const coordDept = normalize(coordinator.department);
+    const coordProgramme = normalize(coordinator.programme);
+    let score = 0;
+    if (department && coordDept && department === coordDept) score += 4;
+    if (faculty && coordDept && coordDept.includes(faculty)) score += 2;
+    if (programme && coordProgramme && programme === coordProgramme) score += 3;
+    return { coordinator, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.coordinator?.id || coordinators[0].id;
+}
+
 /* ══════════════════════════════════════════════════
    REAL-TIME SUBSCRIPTION HELPERS
    Subscribe to a collection; returns unsubscribe fn
@@ -82,6 +110,9 @@ export function subscribeToUserNotifications(userId, callback) {
   return onSnapshot(q, (snapshot) => {
     const docs = snapshot.docs.map(d => convertTimestamps({ id: d.id, ...d.data() }));
     callback(docs);
+  }, (error) => {
+    console.error('Error subscribing to user notifications:', error);
+    callback([]);
   });
 }
 
@@ -164,18 +195,35 @@ export async function getUserDocById(userId) {
 export async function updateUserRole(userId, newRole, allUsers) {
   await updateDoc(doc(db, COLLECTIONS.USERS, userId), { role: newRole });
   const u = allUsers?.find(x => x.id === userId);
-  await addAuditLog('admin-001', 'Admin', 'Role Changed', 'User', userId, `Changed role to ${newRole}`);
+  await addAuditLog(u?.id || 'admin', u?.name || 'Admin', 'Role Changed', 'User', userId, `Changed role to ${newRole}`);
 }
 
 /* ══════════════════════════════════════════════════
    HD REQUEST FUNCTIONS
    ══════════════════════════════════════════════════ */
 
-export async function createHDRequest({ type, title, description, studentId, studentName, supervisorId, coordinatorId, documents = [] }, allUsers) {
+export async function createHDRequest({
+  type,
+  title,
+  description,
+  studentId,
+  studentName,
+  supervisorId,
+  coordinatorId,
+  documents = [],
+  studentDepartment,
+  studentFaculty,
+  studentProgramme,
+}, allUsers) {
   const now = new Date();
+  const resolvedCoordinatorId = resolveCoordinatorId(allUsers, coordinatorId, {
+    studentDepartment,
+    studentFaculty,
+    studentProgramme,
+  });
   const data = {
     type, title, description, status: 'draft',
-    studentId, studentName, supervisorId, coordinatorId,
+    studentId, studentName, supervisorId, coordinatorId: resolvedCoordinatorId,
     createdAt: now, updatedAt: now, currentOwner: studentId,
     documents,
     versions: [{ version: 1, date: now, action: 'Created', by: studentId }],
@@ -185,6 +233,21 @@ export async function createHDRequest({ type, title, description, studentId, stu
   const user = allUsers?.find(u => u.id === studentId);
   await addAuditLog(studentId, user?.name, 'Created Request', 'HDRequest', docRef.id, `Created ${title}`);
   return { id: docRef.id, ...data };
+}
+
+async function addWorkflowMilestone(request, type, title, description) {
+  if (!request?.studentId) return;
+  try {
+    await addMilestoneDoc({
+      studentId: request.studentId,
+      title,
+      type,
+      date: new Date(),
+      description,
+    });
+  } catch {
+    // Do not block workflow transitions on milestone automation failures
+  }
 }
 
 export async function submitToSupervisor(requestId, userId, allUsers) {
@@ -212,7 +275,8 @@ export async function submitToSupervisor(requestId, userId, allUsers) {
   const sup = allUsers?.find(u => u.id === r.supervisorId);
   await addAuditLog(userId, user?.name, 'Submitted Request', 'HDRequest', requestId, `Submitted ${r.title} to supervisor`);
   await addNotificationDoc(r.supervisorId, 'New Request for Review', `${r.studentName} has submitted "${r.title}" for your review. Access code: ${code}`, 'info', '/requests');
-  await addNotificationDoc(r.studentId, 'Request Submitted', `Your request "${r.title}" has been submitted to ${sup?.name}`, 'success', '/tracker');
+  await addNotificationDoc(r.studentId, 'Request Submitted', `Your request "${r.title}" has been submitted to ${sup?.name}`, 'success', '/progress-tracker');
+  await addWorkflowMilestone(r, 'submission', `${r.title} submitted`, 'Request submitted to supervisor for review.');
 }
 
 export async function validateAccessCode(requestId, code) {
@@ -269,7 +333,8 @@ export async function supervisorApprove(requestId, userId, signatureName, allUse
     await addAuditLog(userId, user?.name, 'Approved Request', 'HDRequest', requestId, 'Approved and forwarded to coordinator');
     await addNotificationDoc(r.coordinatorId, 'Request Awaiting Review', `"${r.title}" from ${r.studentName} is ready for coordinator review`, 'info', '/requests');
   }
-  await addNotificationDoc(r.studentId, 'Request Approved by Supervisor', `Your request "${r.title}" has been approved and forwarded`, 'success', '/tracker');
+  await addNotificationDoc(r.studentId, 'Request Approved by Supervisor', `Your request "${r.title}" has been approved and forwarded`, 'success', '/progress-tracker');
+  await addWorkflowMilestone(r, 'review', `${r.title} approved by supervisor`, 'Supervisor approval recorded and request forwarded to next stage.');
 }
 
 export async function coSupervisorSign(requestId, userId, signatureName, allUsers) {
@@ -292,7 +357,8 @@ export async function coSupervisorSign(requestId, userId, signatureName, allUser
 
   await addAuditLog(userId, user?.name, 'Co-Supervisor Signed', 'HDRequest', requestId, 'Co-supervisor signed and forwarded to coordinator');
   await addNotificationDoc(r.coordinatorId, 'Request Ready for Review', `"${r.title}" has been signed by all supervisors and is ready for coordinator review`, 'info', '/requests');
-  await addNotificationDoc(r.studentId, 'Co-Supervisor Signed', `Your request "${r.title}" has been signed by the co-supervisor`, 'success', '/tracker');
+  await addNotificationDoc(r.studentId, 'Co-Supervisor Signed', `Your request "${r.title}" has been signed by the co-supervisor`, 'success', '/progress-tracker');
+  await addWorkflowMilestone(r, 'review', `${r.title} signed by co-supervisor`, 'Co-supervisor approval recorded.');
 }
 
 export async function referBack(requestId, userId, reason, allUsers) {
@@ -322,6 +388,7 @@ export async function referBack(requestId, userId, reason, allUsers) {
   if (r.supervisorId !== userId) {
     await addNotificationDoc(r.supervisorId, 'Request Referred Back', `"${r.title}" for ${r.studentName} has been referred back`, 'warning', '/requests');
   }
+  await addWorkflowMilestone(r, 'review', `${r.title} referred back`, reason || 'Request referred back for revisions.');
 }
 
 export async function forwardToFHD(requestId, userId, signatureName, allUsers) {
@@ -344,7 +411,8 @@ export async function forwardToFHD(requestId, userId, signatureName, allUsers) {
 
   await addAuditLog(userId, user?.name, 'Forwarded to Faculty Board', 'HDRequest', requestId, 'Signed and forwarded to Faculty Higher Degrees Committee');
   await addNotificationDoc('admin-001', 'Request Forwarded to Faculty Board', `"${r.title}" from ${r.studentName} has been forwarded to the Faculty Board`, 'info', '/requests');
-  await addNotificationDoc(r.studentId, 'Request at Faculty Board', `Your request "${r.title}" is now with the Faculty Higher Degrees Committee`, 'info', '/tracker');
+  await addNotificationDoc(r.studentId, 'Request at Faculty Board', `Your request "${r.title}" is now with the Faculty Higher Degrees Committee`, 'info', '/progress-tracker');
+  await addWorkflowMilestone(r, 'review', `${r.title} sent to Faculty Board`, 'Coordinator signed and forwarded request to FHD.');
 }
 
 export async function recordFHDOutcome(requestId, userId, outcome, referenceNumber, reason, allUsers) {
@@ -384,7 +452,12 @@ export async function recordFHDOutcome(requestId, userId, outcome, referenceNumb
 
   updates.versions = versions;
   await updateDoc(docRef, convertDates(updates));
-  await addNotificationDoc(r.studentId, 'Faculty Board Decision', `Faculty Board outcome for "${r.title}": ${outcome.replace('_', ' ')}`, outcome === 'referred_back' ? 'error' : 'success', '/tracker');
+  await addNotificationDoc(r.studentId, 'Faculty Board Decision', `Faculty Board outcome for "${r.title}": ${outcome.replace('_', ' ')}`, outcome === 'referred_back' ? 'error' : 'success', '/progress-tracker');
+  if (outcome === 'approved' || outcome === 'recommended') {
+    await addWorkflowMilestone(r, 'review', `${r.title} decided by Faculty Board`, `Outcome: ${outcome.replace('_', ' ')}${referenceNumber ? ` (Ref: ${referenceNumber})` : ''}.`);
+  } else {
+    await addWorkflowMilestone(r, 'review', `${r.title} referred back by Faculty Board`, reason || 'Faculty Board requested revisions.');
+  }
 }
 
 export async function recordSHDOutcome(requestId, userId, outcome, reason, allUsers) {
@@ -400,11 +473,9 @@ export async function recordSHDOutcome(requestId, userId, outcome, reason, allUs
   if (outcome === 'approved') {
     updates.status = 'approved';
     updates.locked = true;
-    updates.finalPdfUrl = `/documents/${requestId}_final.pdf`;
-    updates.googleDriveUrl = `https://drive.google.com/mock/${requestId}`;
     versions.push({ version: versions.length + 1, date: now, action: 'Senate Board Approved – Request complete', by: userId });
     await addAuditLog(userId, user?.name, 'Final Approval', 'HDRequest', requestId, 'Senate Board approved – request fully approved');
-    await addNotificationDoc(r.studentId, 'Request Approved', `Your request "${r.title}" has been fully approved by the Senate Board`, 'success', '/tracker');
+    await addNotificationDoc(r.studentId, 'Request Approved', `Your request "${r.title}" has been fully approved by the Senate Board`, 'success', '/progress-tracker');
   } else {
     updates.status = 'referred_back';
     updates.currentOwner = r.supervisorId;
@@ -416,11 +487,16 @@ export async function recordSHDOutcome(requestId, userId, outcome, reason, allUs
     versions.push({ version: versions.length + 1, date: now, action: `Senate Board Referred Back: ${reason}`, by: userId });
     await addAuditLog(userId, user?.name, 'Senate Board Referred Back', 'HDRequest', requestId, `Referred back from Senate Board: ${reason}`);
     await addNotificationDoc(r.supervisorId, 'Senate Board Referred Back', `"${r.title}" referred back by the Senate Board. 24 hours to amend.`, 'error', '/requests');
-    await addNotificationDoc(r.studentId, 'Senate Board Referred Back', `The Senate Board referred back "${r.title}": ${reason}`, 'error', '/tracker');
+    await addNotificationDoc(r.studentId, 'Senate Board Referred Back', `The Senate Board referred back "${r.title}": ${reason}`, 'error', '/progress-tracker');
   }
 
   updates.versions = versions;
   await updateDoc(docRef, convertDates(updates));
+  if (outcome === 'approved') {
+    await addWorkflowMilestone(r, 'completion', `${r.title} fully approved`, 'Senate Board final approval recorded.');
+  } else {
+    await addWorkflowMilestone(r, 'review', `${r.title} referred back by Senate Board`, reason || 'Senate Board requested revisions.');
+  }
 }
 
 export async function resubmitRequest(requestId, userId, allUsers) {
@@ -447,6 +523,7 @@ export async function resubmitRequest(requestId, userId, allUsers) {
 
   await addAuditLog(userId, user?.name, 'Resubmitted Request', 'HDRequest', requestId, `Resubmitted "${r.title}" after referral`);
   await addNotificationDoc(r.supervisorId, 'Request Resubmitted', `${r.studentName} has resubmitted "${r.title}". Code: ${code}`, 'info', '/requests');
+  await addWorkflowMilestone(r, 'submission', `${r.title} resubmitted`, 'Student resubmitted request after referral.');
 }
 
 /* ══════════════════════════════════════════════════
@@ -471,6 +548,10 @@ export async function updateStudentProfile(userId, updates) {
   if (updates.thesisTitle !== undefined) updateFields.thesisTitle = updates.thesisTitle;
   if (updates.status !== undefined) updateFields.status = updates.status;
   if (updates.coSupervisorId !== undefined) updateFields.coSupervisorId = updates.coSupervisorId || null;
+  if (updates.nominalSupervisorId !== undefined) updateFields.nominalSupervisorId = updates.nominalSupervisorId || null;
+  if (updates.programme !== undefined) updateFields.programme = updates.programme;
+  if (updates.degree !== undefined) updateFields.degree = updates.degree;
+  if (updates.researchTitle !== undefined) updateFields.researchTitle = updates.researchTitle;
 
   if (updates.supervisorId !== undefined) {
     updateFields.supervisorId = updates.supervisorId;
@@ -485,13 +566,47 @@ export async function updateStudentProfile(userId, updates) {
 }
 
 /* ══════════════════════════════════════════════════
+   STUDENT PROFILE – Create (for new student seeding)
+   ══════════════════════════════════════════════════ */
+
+export async function createStudentProfile(profileData) {
+  const data = {
+    userId: profileData.userId,
+    studentNumber: profileData.studentNumber || '',
+    programme: profileData.programme || '',
+    degree: profileData.degree || '',
+    registrationDate: profileData.registrationDate || new Date(),
+    yearsRegistered: profileData.yearsRegistered || 1,
+    status: profileData.status || 'active',
+    supervisorId: profileData.supervisorId || null,
+    coSupervisorId: profileData.coSupervisorId || null,
+    nominalSupervisorId: profileData.nominalSupervisorId || null,
+    thesisTitle: profileData.thesisTitle || '',
+    researchTitle: profileData.researchTitle || '',
+    supervisorHistory: profileData.supervisorHistory || [],
+  };
+  const docRef = await addDoc(collection(db, COLLECTIONS.STUDENT_PROFILES), convertDates(data));
+  return { id: docRef.id, ...data };
+}
+
+/* ══════════════════════════════════════════════════
    CALENDAR FUNCTIONS
    ══════════════════════════════════════════════════ */
 
-export async function addCalendarEventDoc({ title, date, time, type, scope, description, createdBy }) {
+export async function addCalendarEventDoc({ title, date, time, type, scope, description, createdBy, targetUserIds }) {
   const data = { title, date: new Date(date), time, type, scope, description, createdBy };
+  // targetUserIds: array of user IDs this event is assigned to (for admin adding events to specific user calendars)
+  if (targetUserIds?.length) data.targetUserIds = targetUserIds;
   const docRef = await addDoc(collection(db, COLLECTIONS.CALENDAR_EVENTS), convertDates(data));
   await addAuditLog(createdBy, null, 'Created Calendar Event', 'CalendarEvent', docRef.id, `Created event: ${title}`);
+  // Notify target users if event is assigned to specific users
+  if (targetUserIds?.length) {
+    for (const uid of targetUserIds) {
+      if (uid !== createdBy) {
+        await addNotificationDoc(uid, 'New Calendar Event', `A new event "${title}" has been added to your calendar.`, 'info', '/dashboard');
+      }
+    }
+  }
   return { id: docRef.id, ...data };
 }
 
@@ -560,8 +675,13 @@ export async function updateUserProfile(userId, updates) {
   const docRef = doc(db, COLLECTIONS.USERS, userId);
   const fields = {};
   if (updates.name !== undefined) fields.name = updates.name;
-  if (updates.department !== undefined) fields.department = updates.department;
+  if (updates.firstName !== undefined) fields.firstName = updates.firstName;
+  if (updates.surname !== undefined) fields.surname = updates.surname;
+  if (updates.title !== undefined) fields.title = updates.title;
+  if (updates.programme !== undefined) fields.programme = updates.programme;
+  if (updates.researchTitle !== undefined) fields.researchTitle = updates.researchTitle;
   if (updates.notificationPrefs !== undefined) fields.notificationPrefs = updates.notificationPrefs;
+  if (updates.mustChangePassword !== undefined) fields.mustChangePassword = updates.mustChangePassword;
   await updateDoc(docRef, fields);
 }
 
@@ -569,17 +689,40 @@ export async function updateUserProfile(userId, updates) {
    ADMIN – Create & Delete Users
    ══════════════════════════════════════════════════ */
 
-export async function createUserDoc({ id, email, name, role, department, studentNumber }) {
-  const data = { email: email.toLowerCase(), name, role, department };
+export async function createUserDoc({ id, email, name, role, studentNumber, firstName, surname, title, permissions, generatedPassword, mustChangePassword, organization }) {
+  const data = { email: email.toLowerCase(), name, role };
   if (studentNumber) data.studentNumber = studentNumber;
+  if (firstName) data.firstName = firstName;
+  if (surname) data.surname = surname;
+  if (title) data.title = title;
+  if (permissions?.length) data.permissions = permissions;
+  if (generatedPassword) data.generatedPassword = generatedPassword;
+  if (mustChangePassword !== undefined) data.mustChangePassword = mustChangePassword;
+  if (organization) data.organization = organization;
+  data.createdAt = serverTimestamp();
   await setDoc(doc(db, COLLECTIONS.USERS, id), data);
-  await addAuditLog('admin-001', 'Admin', 'Created User', 'User', id, `Created user: ${name} (${email})`);
+  await addAuditLog(id, 'Admin', 'Created User', 'User', id, `Created user: ${name} (${email})`);
   return { id, ...data };
 }
 
-export async function deleteUserDoc(userId) {
+export async function updateUserDoc(userId, updates, adminUser) {
+  const docRef = doc(db, COLLECTIONS.USERS, userId);
+  const fields = {};
+  const allowedKeys = ['name', 'email', 'role', 'firstName', 'surname', 'title', 'permissions', 'studentNumber', 'organization', 'notificationPrefs', 'mustChangePassword', 'generatedPassword', 'programme', 'researchTitle'];
+  for (const key of allowedKeys) {
+    if (updates[key] !== undefined) fields[key] = updates[key];
+  }
+  await updateDoc(docRef, fields);
+  const adminName = adminUser?.name || 'Admin';
+  const adminId = adminUser?.id || 'system';
+  await addAuditLog(adminId, adminName, 'Updated User', 'User', userId, `Updated user: ${userId}`);
+}
+
+export async function deleteUserDoc(userId, adminUser) {
   await deleteDoc(doc(db, COLLECTIONS.USERS, userId));
-  await addAuditLog('admin-001', 'Admin', 'Deleted User', 'User', userId, `Deleted user ${userId}`);
+  const adminName = adminUser?.name || 'Admin';
+  const adminId = adminUser?.id || 'system';
+  await addAuditLog(adminId, adminName, 'Deleted User', 'User', userId, `Deleted user ${userId}`);
 }
 
 /* ══════════════════════════════════════════════════
@@ -605,6 +748,78 @@ export async function checkOverdueRequests(allRequests, allUsers) {
     }
   }
   return overdueItems;
+}
+
+/* ══════════════════════════════════════════════════
+   48-HOUR REFERRAL NOTIFICATION CHECK
+   ══════════════════════════════════════════════════ */
+
+/**
+ * Check for requests referred back > 48 hours ago without resubmission.
+ * Creates notifications for affected students and their supervisors.
+ */
+export async function checkReferralNotifications(allRequests, allUsers) {
+  const REFERRAL_HOURS = 48;
+  const now = Date.now();
+  const alerts = [];
+
+  for (const r of allRequests) {
+    // Only check requests in referred_back status
+    if (r.status !== 'referred_back') continue;
+    const referredAt = r.referredBackAt || r.updatedAt;
+    if (!referredAt) continue;
+    const referredTime = referredAt instanceof Date ? referredAt.getTime() : new Date(referredAt).getTime();
+    const elapsed = (now - referredTime) / 3600000;
+    if (elapsed >= REFERRAL_HOURS) {
+      alerts.push({
+        requestId: r.id,
+        studentId: r.studentId,
+        title: r.title,
+        hoursElapsed: Math.round(elapsed),
+        referredAt: new Date(referredTime),
+      });
+    }
+  }
+
+  // Create notifications for each overdue referral
+  for (const alert of alerts) {
+    const student = allUsers.find(u => u.id === alert.studentId);
+    if (student) {
+      await addNotificationDoc(
+        alert.studentId,
+        'Referral Pending Action',
+        `Your request "${alert.title}" was referred back ${alert.hoursElapsed} hours ago and still needs attention.`,
+        'warning',
+        '/requests'
+      );
+    }
+    // Notify supervisor if assigned
+    const request = allRequests.find(rq => rq.id === alert.requestId);
+    if (request?.supervisorId) {
+      await addNotificationDoc(
+        request.supervisorId,
+        'Student Referral Overdue',
+        `${student?.name || 'A student'}'s request "${alert.title}" has been pending referral action for ${alert.hoursElapsed} hours.`,
+        'warning',
+        '/requests'
+      );
+    }
+  }
+
+  return alerts;
+}
+
+/* ══════════════════════════════════════════════════
+   PASSWORD GENERATION UTILITY
+   ══════════════════════════════════════════════════ */
+
+export function generateTemporaryPassword(length = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 }
 
 /* ══════════════════════════════════════════════════

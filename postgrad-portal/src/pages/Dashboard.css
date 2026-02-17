@@ -160,6 +160,46 @@
   color: var(--text-primary);
 }
 
+/* ── Compact mode (main dashboard) ── */
+.main-dashboard-compact .compact-stats-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.main-dashboard-compact .stat-card {
+  padding: var(--space-md) var(--space-lg);
+  gap: var(--space-sm);
+}
+.main-dashboard-compact .stat-card-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+.main-dashboard-compact .stat-card-label {
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+.main-dashboard-compact .stat-card-value {
+  font-size: 20px;
+}
+
+.main-dashboard-compact .compact-quick-actions-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-sm);
+}
+.main-dashboard-compact .quick-action-card {
+  padding: var(--space-md);
+  gap: 6px;
+}
+.main-dashboard-compact .quick-action-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+.main-dashboard-compact .quick-action-label {
+  font-size: 11px;
+}
+
 /* ── Progress bar ── */
 .progress-bar-container {
   width: 100%;
@@ -244,6 +284,24 @@
 }
 @media (max-width: 768px) {
   .student-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Supervisor Dashboard Grid ── */
+.supervisor-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+.supervisor-dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+@media (max-width: 768px) {
+  .supervisor-dashboard-grid {
     grid-template-columns: 1fr;
   }
 }

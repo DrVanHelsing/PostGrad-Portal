@@ -51,6 +51,9 @@ const ROLE_COLORS = {
   student: { bg: '#f5f3ff', color: '#7c3aed', label: 'Student' },
 };
 
+/* Color name → hex mapping (for embedded annotation seed data) */
+const EMBED_COLOR_MAP = { yellow: '#ffd43b', green: '#69db7c', blue: '#74c0fc', red: '#ffa8a8', pink: '#ffc9c9', orange: '#ffa94d' };
+
 /* ══════════════════════════════════════════
    MAIN COMPONENT: AnnotatedDocViewer
    ══════════════════════════════════════════ */
@@ -61,17 +64,32 @@ export default function AnnotatedDocViewer({
   user,
   onClose,
 }) {
-  const { addNotification, getUserById, mockHDRequests } = useData();
+  const { addNotification, getUserById, mockHDRequests, getThesisSubmissionById } = useData();
+
+  // Log all props on mount for debugging
+  useEffect(() => {
+    console.warn('[AnnotatedDocViewer] MOUNTED with props:', {
+      docName: doc?.name,
+      docUrl: doc?.url?.slice(0, 60),
+      versionId,
+      requestId,
+      userRole: user?.role,
+      userId: user?.id,
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [numPages, setNumPages] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1.2);
   const [pdfError, setPdfError] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(true);
+  const [textLayerRendered, setTextLayerRendered] = useState(0);
 
   // Annotations
-  const [annotations, setAnnotations] = useState([]);
+  const [firestoreAnnotations, setFirestoreAnnotations] = useState([]);
   const [annotationsError, setAnnotationsError] = useState(null);
   const [activeAnnotation, setActiveAnnotation] = useState(null);
+  const [focusedAnnotation, setFocusedAnnotation] = useState(null);
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [sidebarTab, setSidebarTab] = useState('annotations'); // 'annotations' | 'new'
 
@@ -95,23 +113,186 @@ export default function AnnotatedDocViewer({
   const viewerRef = useRef(null);
   const pdfContainerRef = useRef(null);
 
+  const focusAnnotationInView = useCallback((rect) => {
+    if (!rect || !pdfContainerRef.current) return;
+    pdfContainerRef.current.scrollTo({
+      top: Math.max(0, rect.top - 120),
+      left: Math.max(0, rect.left - 40),
+      behavior: 'smooth',
+    });
+  }, []);
+
+  const handleSelectAnnotation = useCallback((annotation) => {
+    const next = annotation.id === activeAnnotation ? null : annotation.id;
+    setActiveAnnotation(next);
+    if (next) {
+      setFocusedAnnotation(annotation.id);
+      if (annotation.pageNumber && annotation.pageNumber !== currentPage) {
+        setCurrentPage(annotation.pageNumber);
+      }
+    }
+  }, [activeAnnotation, currentPage]);
+
+  useEffect(() => {
+    if (!focusedAnnotation) return;
+    const timer = setTimeout(() => setFocusedAnnotation(null), 1500);
+    return () => clearTimeout(timer);
+  }, [focusedAnnotation]);
+
   const ext = doc.name?.split('.').pop()?.toLowerCase();
   const isPdf = ext === 'pdf';
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
 
   const canAnnotate = user?.role === 'supervisor' || user?.role === 'coordinator' || user?.role === 'admin';
 
-  /* ── Subscribe to annotations ── */
+  // Validated PDF URL — ensures we never feed HTML to pdf.js
+  const [validatedPdfUrl, setValidatedPdfUrl] = useState(null);
+
   useEffect(() => {
-    if (!versionId || !doc.name) return;
-    const unsub = subscribeToAnnotations(
-      versionId,
-      doc.name,
-      (anns) => setAnnotations(anns),
-      (err) => setAnnotationsError(err.message)
-    );
-    return unsub;
+    if (!isPdf || !doc.url) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // blob: and data: URLs are already in-memory, pass through
+        if (doc.url.startsWith('blob:') || doc.url.startsWith('data:')) {
+          if (!cancelled) setValidatedPdfUrl(doc.url);
+          return;
+        }
+
+        const resp = await fetch(doc.url);
+        const ct = resp.headers.get('content-type') || '';
+
+        // If the server returned HTML, the file probably doesn't exist
+        if (ct.includes('text/html')) {
+          console.warn('[AnnotatedDocViewer] URL returned HTML instead of PDF:', doc.url);
+          if (!cancelled) {
+            setPdfError('Document file not found on server.');
+            setPdfLoading(false);
+          }
+          return;
+        }
+
+        // Convert to blob URL so react-pdf doesn't re-fetch
+        const blob = await resp.blob();
+        if (!cancelled) setValidatedPdfUrl(URL.createObjectURL(blob));
+      } catch (err) {
+        console.error('[AnnotatedDocViewer] Failed to pre-fetch PDF:', err);
+        // Fall back to letting react-pdf attempt the URL directly
+        if (!cancelled) setValidatedPdfUrl(doc.url);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [doc.url, isPdf]);
+
+  /* ── Subscribe to annotations from Firestore 'annotations' collection ── */
+  useEffect(() => {
+    if (!versionId || !doc.name) {
+      console.warn('[Annotations] Subscription skipped — missing:', { versionId, docName: doc.name });
+      return;
+    }
+    console.warn('[Annotations] Subscribing →', { versionId, docName: doc.name });
+    setAnnotationsError(null);
+    let unsub;
+    let receivedSnapshot = false;
+    try {
+      unsub = subscribeToAnnotations(
+        versionId,
+        doc.name,
+        (anns) => {
+          receivedSnapshot = true;
+          console.warn('[Annotations] Firestore snapshot →', anns.length, 'annotations');
+          setFirestoreAnnotations(anns);
+        },
+        (err) => {
+          receivedSnapshot = true;
+          console.error('[Annotations] Subscription error →', err);
+          setAnnotationsError(err.message || String(err));
+        }
+      );
+    } catch (err) {
+      console.error('[Annotations] Subscription setup failed →', err);
+      setAnnotationsError(err.message || String(err));
+    }
+
+    // Fallback: If onSnapshot hasn't called back within 3s, try one-shot getDocs
+    const fallbackTimer = setTimeout(async () => {
+      if (receivedSnapshot) return;
+      console.warn('[Annotations] onSnapshot fallback — trying getDocs...');
+      try {
+        const { collection: fbCollection, query: fbQuery, where: fbWhere, getDocs: fbGetDocs } = await import('firebase/firestore');
+        const { db: fbDb } = await import('../firebase/config');
+        const q = fbQuery(
+          fbCollection(fbDb, 'annotations'),
+          fbWhere('versionId', '==', versionId),
+          fbWhere('documentName', '==', doc.name)
+        );
+        const snap = await fbGetDocs(q);
+        const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.warn('[Annotations] getDocs fallback →', results.length, 'annotations');
+        if (results.length > 0) {
+          setFirestoreAnnotations(results);
+        }
+      } catch (fbErr) {
+        console.error('[Annotations] getDocs fallback failed →', fbErr);
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      if (unsub) unsub();
+    };
   }, [versionId, doc.name]);
+
+  /* ── Merge Firestore annotations with embedded annotations from the submission ── */
+  const annotations = useMemo(() => {
+    // Start with Firestore annotations (these have properly mapped fields)
+    const merged = new Map();
+    for (const a of firestoreAnnotations) merged.set(a.id, a);
+
+    // Look up embedded annotations from the thesis submission
+    let embeddedFound = 0;
+    if (requestId && getThesisSubmissionById) {
+      const sub = getThesisSubmissionById(requestId);
+      if (sub?.annotations && Array.isArray(sub.annotations)) {
+        for (const raw of sub.annotations) {
+          // Only include annotations for the current versionId
+          if (versionId && raw.versionId && raw.versionId !== versionId) continue;
+          embeddedFound++;
+          // Skip if we already have this from Firestore (Firestore wins)
+          if (merged.has(raw.id)) continue;
+          // Map field names:  page → pageNumber,  color → highlightColor
+          merged.set(raw.id, {
+            ...raw,
+            pageNumber: raw.pageNumber || raw.page || 1,
+            highlightColor: raw.highlightColor || (raw.color?.startsWith('#') ? raw.color : EMBED_COLOR_MAP[raw.color] || '#ffd43b'),
+            resolved: raw.resolved ?? (raw.status === 'resolved'),
+            documentName: raw.documentName || doc.name,
+            requestId: raw.requestId || requestId,
+            replies: raw.replies || [],
+          });
+        }
+      }
+      console.warn('[Annotations] Merge →', {
+        firestoreCount: firestoreAnnotations.length,
+        embeddedForVersion: embeddedFound,
+        totalMerged: merged.size,
+        requestId,
+        subFound: !!sub,
+        subAnnotationsCount: sub?.annotations?.length || 0,
+      });
+    } else {
+      console.warn('[Annotations] Merge → no requestId or getThesisSubmissionById', { requestId, hasFn: !!getThesisSubmissionById });
+    }
+
+    return Array.from(merged.values())
+      .sort((a, b) => {
+        const da = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+        const db2 = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+        return da - db2;
+      });
+  }, [firestoreAnnotations, requestId, versionId, doc.name, getThesisSubmissionById]);
 
   /* ── PDF load handlers ── */
   const onDocumentLoadSuccess = useCallback(({ numPages: n }) => {
@@ -128,13 +309,17 @@ export default function AnnotatedDocViewer({
 
   /* ── Text selection handler ── */
   const handleTextSelection = useCallback(() => {
-    if (!canAnnotate) return;
+    if (!canAnnotate) {
+      console.warn('[Annotations] Text selection ignored — canAnnotate is false (role:', user?.role, ')');
+      return;
+    }
     const selection = window.getSelection();
     const text = selection?.toString()?.trim();
     if (!text || text.length < 2) {
       setShowSelectionPopover(false);
       return;
     }
+    console.warn('[Annotations] Text selected:', text.slice(0, 40), '...');
     setSelectedText(text);
 
     // Determine which page the selection is in
@@ -180,6 +365,7 @@ export default function AnnotatedDocViewer({
   const handleCreateAnnotation = async () => {
     if (!selectedText || !newComment.trim()) return;
     setIsSubmitting(true);
+    console.warn('[Annotations] Creating annotation →', { versionId, requestId, docName: doc.name, selectedText: selectedText.slice(0, 30), pageNumber: selectionPage });
     try {
       await createAnnotation({
         versionId,
@@ -193,12 +379,14 @@ export default function AnnotatedDocViewer({
         authorRole: user.role,
         highlightColor,
       });
+      console.warn('[Annotations] Annotation created successfully');
       setSelectedText('');
       setNewComment('');
       setShowSelectionPopover(false);
       setSidebarTab('annotations');
     } catch (err) {
       console.error('Create annotation error:', err);
+      setAnnotationsError('Failed to save annotation: ' + (err.message || String(err)));
     } finally {
       setIsSubmitting(false);
     }
@@ -374,9 +562,9 @@ export default function AnnotatedDocViewer({
                     </a>
                   )}
                 </div>
-              ) : (
+              ) : validatedPdfUrl ? (
                 <Document
-                  file={doc.url}
+                  file={validatedPdfUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={onDocumentLoadError}
                   loading=""
@@ -386,9 +574,10 @@ export default function AnnotatedDocViewer({
                     scale={scale}
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
+                    onRenderTextLayerSuccess={() => setTextLayerRendered(c => c + 1)}
                   />
                 </Document>
-              )}
+              ) : null}
 
               {/* Selection popover */}
               {showSelectionPopover && (
@@ -440,8 +629,11 @@ export default function AnnotatedDocViewer({
                   key={ann.id}
                   annotation={ann}
                   isActive={activeAnnotation === ann.id}
-                  onClick={() => setActiveAnnotation(ann.id === activeAnnotation ? null : ann.id)}
+                  isFocused={focusedAnnotation === ann.id}
+                  onFocusRect={focusAnnotationInView}
+                  onClick={() => handleSelectAnnotation(ann)}
                   containerRef={pdfContainerRef}
+                  textLayerRendered={textLayerRendered}
                 />
               ))}
             </>
@@ -488,6 +680,48 @@ export default function AnnotatedDocViewer({
             </div>
 
             <div className="adv-sidebar-content">
+              {/* Show Firestore errors prominently */}
+              {annotationsError && (
+                <div style={{ padding: '8px 10px', margin: '0 0 8px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 12, color: '#dc2626' }}>
+                  <strong>⚠ Annotation Error:</strong> {annotationsError}
+                </div>
+              )}
+
+              {/* Debug diagnostics (dev only) */}
+              {import.meta.env.DEV && (
+                <details style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  <summary style={{ cursor: 'pointer', padding: '4px 0' }}>🔍 Debug Info</summary>
+                  <div style={{ padding: '6px 8px', background: 'var(--bg-muted, #f9fafb)', borderRadius: 4, lineHeight: 1.6 }}>
+                    <div><strong>versionId:</strong> {versionId || '(none)'}</div>
+                    <div><strong>doc.name:</strong> {doc.name || '(none)'}</div>
+                    <div><strong>requestId:</strong> {requestId || '(none)'}</div>
+                    <div><strong>Firestore:</strong> {firestoreAnnotations.length} annotations</div>
+                    <div><strong>Merged:</strong> {annotations.length} total</div>
+                    <div><strong>canAnnotate:</strong> {canAnnotate ? 'Yes' : `No (role: ${user?.role})`}</div>
+                    <div><strong>Page:</strong> {currentPage} / {numPages || '?'}</div>
+                    <div><strong>Error:</strong> {annotationsError || 'none'}</div>
+                    <button
+                      style={{ marginTop: 4, fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}
+                      onClick={async () => {
+                        try {
+                          const { collection: c, getDocs: gd } = await import('firebase/firestore');
+                          const { db: d } = await import('../firebase/config');
+                          const snap = await gd(c(d, 'annotations'));
+                          const all = snap.docs.map(x => ({ id: x.id, vId: x.data().versionId, dn: x.data().documentName }));
+                          console.warn('[DEBUG] ALL annotations in Firestore:', all);
+                          alert(`Firestore has ${all.length} total annotations.\nCheck console for details.\n\nLooking for versionId="${versionId}" + docName="${doc.name}":\n→ ${all.filter(a => a.vId === versionId && a.dn === doc.name).length} matches`);
+                        } catch (e) {
+                          alert('Firestore test FAILED: ' + e.message);
+                          console.error('[DEBUG] Firestore test error:', e);
+                        }
+                      }}
+                    >
+                      🧪 Test Firestore Query
+                    </button>
+                  </div>
+                </details>
+              )}
+
               {sidebarTab === 'annotations' ? (
                 annotations.length === 0 ? (
                   <div className="adv-empty-annotations">
@@ -507,10 +741,7 @@ export default function AnnotatedDocViewer({
                         canAnnotate={canAnnotate}
                         currentUserId={user?.id}
                         onClick={() => {
-                          setActiveAnnotation(ann.id === activeAnnotation ? null : ann.id);
-                          if (ann.pageNumber && ann.pageNumber !== currentPage) {
-                            setCurrentPage(ann.pageNumber);
-                          }
+                          handleSelectAnnotation(ann);
                         }}
                         onReply={() => setReplyingTo(ann.id)}
                         onToggleResolved={() => handleToggleResolved(ann)}
@@ -792,22 +1023,44 @@ function AnnotationCard({
    Searches for matching text in the PDF text
    layer and draws a colored highlight box.
    ══════════════════════════════════════════ */
-function HighlightOverlay({ annotation, isActive, onClick, containerRef }) {
+function HighlightOverlay({ annotation, isActive, isFocused, onFocusRect, onClick, containerRef, textLayerRendered }) {
   const [rects, setRects] = useState([]);
 
   useEffect(() => {
     if (!containerRef.current || !annotation.selectedText) return;
 
-    // Small delay to let text layer render
-    const timer = setTimeout(() => {
+    const findAndHighlight = () => {
+      // Try both class names for react-pdf text layer compatibility
       const textLayer = containerRef.current.querySelector(
         `.react-pdf__Page[data-page-number="${annotation.pageNumber || 1}"] .react-pdf__Page__textContent`
+      ) || containerRef.current.querySelector(
+        `.react-pdf__Page[data-page-number="${annotation.pageNumber || 1}"] .textLayer`
       );
-      if (!textLayer) return;
+      if (!textLayer) return false;
+
+      const normalizeWithMap = (value) => {
+        let normalized = '';
+        const map = [];
+        let lastWasSpace = false;
+        for (let i = 0; i < value.length; i += 1) {
+          const raw = value[i];
+          const next = /\s/.test(raw) ? ' ' : raw.toLowerCase();
+          if (next === ' ') {
+            if (lastWasSpace) continue;
+            lastWasSpace = true;
+          } else {
+            lastWasSpace = false;
+          }
+          normalized += next;
+          map.push(i);
+        }
+        return { normalized: normalized.trim(), map };
+      };
 
       // Find matching text spans
       const spans = textLayer.querySelectorAll('span');
-      const searchText = annotation.selectedText.toLowerCase().replace(/\s+/g, ' ');
+      if (spans.length === 0) return false;
+      const { normalized: searchText } = normalizeWithMap(annotation.selectedText || '');
       let foundRects = [];
 
       // Build a concatenation of all span texts to find the match
@@ -820,14 +1073,16 @@ function HighlightOverlay({ annotation, isActive, onClick, containerRef }) {
         spanMap.push({ idx, start, end: start + txt.length, span });
       });
 
-      const normalizedFull = fullText.toLowerCase().replace(/\s+/g, ' ');
+      const { normalized: normalizedFull, map: normalizedMap } = normalizeWithMap(fullText);
       const matchIdx = normalizedFull.indexOf(searchText);
-      if (matchIdx !== -1) {
+      if (matchIdx !== -1 && searchText.length > 0) {
         // Find which spans overlap with the match
-        const matchEnd = matchIdx + searchText.length;
+        const matchEnd = matchIdx + searchText.length - 1;
+        const rawStart = normalizedMap[matchIdx] ?? 0;
+        const rawEnd = (normalizedMap[matchEnd] ?? rawStart) + 1;
         const containerRect = containerRef.current.getBoundingClientRect();
         spanMap.forEach(({ start, end, span }) => {
-          if (start < matchEnd && end > matchIdx) {
+          if (start < rawEnd && end > rawStart) {
             const r = span.getBoundingClientRect();
             foundRects.push({
               left: r.left - containerRect.left + containerRef.current.scrollLeft,
@@ -839,10 +1094,30 @@ function HighlightOverlay({ annotation, isActive, onClick, containerRef }) {
         });
       }
       setRects(foundRects);
-    }, 300);
+      if (isActive && foundRects.length > 0) {
+        onFocusRect?.(foundRects[0]);
+      }
+      return true;
+    };
+
+    // Short delay after text layer render signal, then retry if needed
+    const timer = setTimeout(() => {
+      if (!findAndHighlight()) {
+        // Retry a few times in case the text layer is still settling
+        let retries = 0;
+        const retryInterval = setInterval(() => {
+          retries++;
+          if (findAndHighlight() || retries >= 10) {
+            clearInterval(retryInterval);
+          }
+        }, 200);
+        // Clean up retry interval after max wait
+        setTimeout(() => clearInterval(retryInterval), 2200);
+      }
+    }, 100);
 
     return () => clearTimeout(timer);
-  }, [annotation, containerRef]);
+  }, [annotation, containerRef, isActive, onFocusRect, textLayerRendered]);
 
   if (rects.length === 0) return null;
 
@@ -859,12 +1134,13 @@ function HighlightOverlay({ annotation, isActive, onClick, containerRef }) {
             width: rect.width,
             height: rect.height,
             background: annotation.highlightColor || '#ffd43b',
-            opacity: isActive ? 0.5 : 0.3,
+            opacity: isFocused ? 0.65 : isActive ? 0.5 : 0.3,
             borderRadius: 2,
             cursor: 'pointer',
             transition: 'opacity 0.15s',
             pointerEvents: 'all',
             zIndex: 5,
+            boxShadow: isFocused ? `0 0 0 2px ${annotation.highlightColor || '#ffd43b'}` : 'none',
           }}
           onClick={(e) => { e.stopPropagation(); onClick(); }}
           title={`${annotation.authorName}: ${annotation.comment?.slice(0, 60)}...`}

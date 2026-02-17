@@ -1426,6 +1426,77 @@ The header/footer editor modals in `FormBuilderPage.jsx` were using `size="lg"` 
 
 ---
 
+## 35. Iteration 7 — UI/UX Polish & Layout Fixes
+
+### 35.1 Annotation Count Badge on Document Cards
+
+**Problem**: The Document Review page showed a blue info banner reading "Thesis annotation workflow is enabled" inside the Documents card for thesis-type requests, but provided no annotation count visibility before opening the viewer.
+
+**Solution**:
+- Removed the blue info banner from the Documents card (`DocumentReviewPage.jsx`)
+- Added real-time annotation count fetching per version using `fetchAnnotationsForVersion()` from `annotations.js`
+- Added annotation count badge to `DocumentCard` component — displayed as a clickable badge (styled with `--status-info` colours) next to the existing comment count badge
+- When annotation count > 0, the badge replaces the standalone eye icon (clicking badge opens the annotated viewer)
+- When annotation count is 0 and annotations are enabled, the eye icon still appears for first-time access
+
+**Files Changed**: `DocumentReviewPage.jsx`, `DocumentReviewPage.css`
+
+### 35.2 Submission Tracker — Horizontal Overflow Fix
+
+**Problem**: The workflow progress stepper in the Submission Tracker used 90px min-width per step and 28px dots, causing horizontal overflow when 7–8 steps were displayed within a constrained viewport.
+
+**Solution**:
+- Reduced workflow step min-width from 90px → 70px
+- Reduced step dot size from 28px → 24px (font 13px → 11px)
+- Reduced step label font from 10px → 9px
+- Reduced card padding from `--space-2xl` → `--space-xl`
+- Reduced header/meta text sizes slightly for density
+- Adjusted connector positions to match new dot sizes
+- Added `overflow: hidden` on card to prevent bleed
+- Added `flex-wrap: wrap` on header for narrow viewports
+- Added responsive breakpoint at 768px (further reduces to 56px min-width, 20px dots)
+
+**Files Changed**: `SubmissionTracker.css`
+
+### 35.3 Supervisor Dashboard — 2-Column Grid Layout
+
+**Problem**: The Supervisor Dashboard used the generic `.content-grid` (auto-fit, minmax 350px) which placed all 5 cards in an unpredictable auto-fit layout. The calendar widget was buried as the 4th item instead of being prominently positioned.
+
+**Solution**:
+- Replaced `.content-grid` with a dedicated `.supervisor-dashboard-grid` (2-column layout matching the Student Dashboard pattern)
+- Left column: Requests for Review, My Students, Historical Submissions
+- Right column: Calendar Widget, Submission Reviews
+- Added `.supervisor-dashboard-grid` and `.supervisor-dashboard-col` CSS classes in `Dashboard.css`
+- Responsive: collapses to single column at 768px
+
+**Files Changed**: `SupervisorDashboard.jsx`, `Dashboard.css`
+
+### 35.4 Cross-Page Layout Fixes
+
+**Problem**: Several pages had potential horizontal overflow issues at narrow viewport widths.
+
+**Fixes Applied**:
+- **HDRequestsPage.css**: Added `flex-wrap: wrap` to `.requests-toolbar-left` which had ~840px worth of filter controls in a non-wrapping flex row
+- **CalendarPage.css**: Added responsive `@media (max-width: 900px)` breakpoint to collapse the `1fr 340px` calendar layout to single column
+
+**Files Changed**: `HDRequestsPage.css`, `CalendarPage.css`
+
+### 35.5 Annotation Text Highlighting Fix
+
+**Problem**: Annotations loaded correctly in the sidebar panel, but the corresponding text on the PDF document was not visually highlighted with color-matched overlays. The `HighlightOverlay` sub-component had a race condition: its `useEffect` fired once with a 300ms delay, but the PDF text layer (rendered asynchronously by react-pdf/pdfjs) was often not ready by then. Since none of the effect dependencies (`annotation`, `containerRef`, `isActive`, `onFocusRect`) changed after mount, the effect never re-ran.
+
+**Solution**:
+- Added `textLayerRendered` counter state to main `AnnotatedDocViewer` component
+- Added `onRenderTextLayerSuccess` callback to `<Page>` component to increment the counter when the text layer finishes rendering
+- Passed `textLayerRendered` as a prop to each `HighlightOverlay` instance and included it in the `useEffect` dependency array, ensuring highlights recompute whenever the text layer renders
+- Added fallback `.textLayer` class selector for react-pdf v10 compatibility
+- Added retry mechanism (up to 10 retries at 200ms intervals) as a safety net for slow-rendering text layers
+- Added empty-spans guard to prevent false positives when text layer DOM is present but not yet populated
+
+**Files Changed**: `AnnotatedDocViewer.jsx`
+
+---
+
 ## References & Sources
 
 The technical decisions, library selections, architecture patterns, and implementation details documented in this changelog were informed by the following sources:

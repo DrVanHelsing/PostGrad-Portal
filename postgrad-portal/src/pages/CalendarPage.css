@@ -7,6 +7,11 @@
   grid-template-columns: 1fr 340px;
   gap: var(--space-xl);
 }
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

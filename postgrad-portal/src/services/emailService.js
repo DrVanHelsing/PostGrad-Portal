@@ -97,7 +97,7 @@ export function sendRequestApprovedEmail(recipientEmail, recipientName, requestT
       (approverName ? ` by ${approverName}` : '') + `.\n\n` +
       `Please log in to the PostGrad Portal for details.\n\n` +
       `Regards,\nPostGrad Portal`,
-    actionUrl:  `${window.location.origin}/tracker`,
+    actionUrl:  `${window.location.origin}/progress-tracker`,
     actionText: 'View Progress',
   });
 }
@@ -132,7 +132,7 @@ export function sendFinalApprovalEmail(studentEmail, studentName, requestTitle, 
       (referenceNumber ? `Reference Number: ${referenceNumber}\n\n` : '') +
       `The final PDF document is available for download in the PostGrad Portal.\n\n` +
       `Regards,\nPostGrad Portal`,
-    actionUrl:  `${window.location.origin}/tracker`,
+    actionUrl:  `${window.location.origin}/progress-tracker`,
     actionText: 'Download PDF',
   });
 }

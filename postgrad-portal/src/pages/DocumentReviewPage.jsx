@@ -9,7 +9,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, Modal, Avatar, EmptyState } from '../components/common';
-import { STATUS_CONFIG, REQUEST_TYPE_LABELS, ROLE_LABELS } from '../utils/constants';
+import { STATUS_CONFIG, REQUEST_TYPE_LABELS, ROLE_LABELS, THESIS_ANNOTATION_REQUEST_TYPES } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
 import {
   subscribeToVersions, createVersion, addComment,
@@ -30,6 +30,7 @@ import {
   HiOutlineTableCells,
   HiOutlinePhoto,
 } from 'react-icons/hi2';
+import { fetchAnnotationsForVersion } from '../firebase/annotations';
 import AnnotatedDocViewer from '../components/AnnotatedDocViewer';
 import './DocumentReviewPage.css';
 
@@ -67,6 +68,7 @@ export default function DocumentReviewPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDocViewer, setShowDocViewer] = useState(null);
   const [toast, setToast] = useState(null);
+  const [annotationCounts, setAnnotationCounts] = useState({});
   const commentInputRef = useRef(null);
 
   // Find the request
@@ -103,6 +105,31 @@ export default function DocumentReviewPage() {
     () => versions.find(v => v.id === activeVersionId),
     [versions, activeVersionId]
   );
+
+  const annotationsEnabled = useMemo(
+    () => THESIS_ANNOTATION_REQUEST_TYPES.includes(request?.type),
+    [request?.type]
+  );
+
+  // Fetch annotation counts per document for the active version
+  useEffect(() => {
+    if (!activeVersion?.id || !annotationsEnabled) {
+      setAnnotationCounts({});
+      return;
+    }
+    let cancelled = false;
+    fetchAnnotationsForVersion(activeVersion.id)
+      .then(annotations => {
+        if (cancelled) return;
+        const counts = {};
+        annotations.forEach(a => {
+          counts[a.documentName] = (counts[a.documentName] || 0) + 1;
+        });
+        setAnnotationCounts(counts);
+      })
+      .catch(err => console.error('Failed to fetch annotation counts:', err));
+    return () => { cancelled = true; };
+  }, [activeVersion?.id, annotationsEnabled]);
 
   const userRole = user?.role;
   const isStudent = userRole === 'student';
@@ -426,8 +453,10 @@ export default function DocumentReviewPage() {
                         <DocumentCard
                           key={i}
                           doc={doc}
+                          canAnnotate={annotationsEnabled}
                           onView={() => setShowDocViewer(doc)}
                           commentCount={(activeVersion.comments || []).filter(c => c.documentName === doc.name).length}
+                          annotationCount={annotationCounts[doc.name] || 0}
                           onFilterComments={() => {
                             setCommentDocFilter(doc.name);
                             commentInputRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -655,8 +684,8 @@ export default function DocumentReviewPage() {
         }}
       />
 
-      {/* ── Annotated Document Viewer ── */}
-      {showDocViewer && (
+      {/* ── Annotated Document Viewer (thesis-only) ── */}
+      {showDocViewer && annotationsEnabled && (
         <AnnotatedDocViewer
           doc={showDocViewer}
           versionId={activeVersion?.id}
@@ -665,10 +694,10 @@ export default function DocumentReviewPage() {
           onClose={() => setShowDocViewer(null)}
         />
       )}
+
     </div>
   );
 }
-
 /* ═══════════════════════════════════════════════
    SUB-COMPONENTS
    ═══════════════════════════════════════════════ */
@@ -684,7 +713,7 @@ function VersionStatusBadge({ status }) {
 }
 
 /* ── Document Card ── */
-function DocumentCard({ doc, onView, commentCount, onFilterComments }) {
+function DocumentCard({ doc, canAnnotate, onView, commentCount, annotationCount, onFilterComments }) {
   const ext = doc.name?.split('.').pop()?.toLowerCase() || '';
   const iconMap = {
     pdf: { icon: <HiOutlineDocumentText />, color: '#e74c3c' },
@@ -707,6 +736,11 @@ function DocumentCard({ doc, onView, commentCount, onFilterComments }) {
         <div className="doc-card-meta">{doc.size} {doc.type && `- ${ext.toUpperCase()}`}</div>
       </div>
       <div className="doc-card-actions">
+        {annotationCount > 0 && (
+          <button className="doc-card-badge doc-card-badge--annotation" onClick={onView} title={`${annotationCount} annotation(s)`}>
+            <HiOutlineEye /> {annotationCount}
+          </button>
+        )}
         {commentCount > 0 && (
           <button className="doc-card-badge" onClick={onFilterComments} title={`${commentCount} comment(s)`}>
             <HiOutlineChatBubbleLeftRight /> {commentCount}
@@ -717,9 +751,11 @@ function DocumentCard({ doc, onView, commentCount, onFilterComments }) {
             <HiOutlineArrowDown />
           </a>
         )}
-        <button className="btn btn-ghost btn-xs" onClick={onView} title="Preview">
-          <HiOutlineEye />
-        </button>
+        {canAnnotate && annotationCount === 0 && (
+          <button className="btn btn-ghost btn-xs" onClick={onView} title="Open Annotated Viewer">
+            <HiOutlineEye />
+          </button>
+        )}
       </div>
     </div>
   );

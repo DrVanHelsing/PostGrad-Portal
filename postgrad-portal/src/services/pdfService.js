@@ -230,12 +230,21 @@ function formatPdfDate(d) {
 
 const TYPE_LABELS = {
   title_registration: 'Title Registration',
-  registration: 'Registration',
   progress_report: 'Progress Report',
-  extension: 'Extension',
+  intention_to_submit: 'Intention to Submit',
+  appointment_of_examiners: 'Appointment of Examiners',
+  examiner_summary_cv: 'Examiner Summary CV',
+  change_of_examiners: 'Change of Examiners',
+  appointment_of_arbiter: 'Appointment of Arbiter',
   leave_of_absence: 'Leave of Absence',
-  examination_entry: 'Examination Entry',
-  supervisor_change: 'Supervisor Change',
+  addition_of_co_supervisor: 'Addition of Co-Supervisor',
+  change_of_supervisor: 'Change of Supervisor',
+  removal_of_supervisor: 'Removal of Supervisor',
+  change_of_thesis_title: 'Change of Thesis Title',
+  readmission: 'Readmission',
+  upgrade_masters_to_doctoral: 'Upgrade Masters to Doctoral',
+  mou: 'Memorandum of Understanding',
+  other_request: 'Other Request',
 };
 
 function formatType(type) {

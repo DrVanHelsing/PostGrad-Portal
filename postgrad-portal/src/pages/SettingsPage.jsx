@@ -1,44 +1,82 @@
 // ============================================
-// Settings Page – Functional forms
+// Settings Page – Profile & Preferences
 // ============================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, Avatar } from '../components/common';
-import { ROLE_LABELS } from '../utils/constants';
+import UserPicker from '../components/common/UserPicker';
+import { ROLE_LABELS, PROGRAMME_OPTIONS, TITLE_OPTIONS, getDisplayName } from '../utils/constants';
 import { formatDate } from '../utils/helpers';
 import {
-  HiOutlineCog6Tooth,
   HiOutlineUser,
   HiOutlineBell,
   HiOutlineShieldCheck,
   HiOutlineAcademicCap,
   HiOutlineCheckCircle,
+  HiOutlineDocumentText,
+  HiOutlineExclamationTriangle,
 } from 'react-icons/hi2';
 
 export default function SettingsPage() {
-  const { user, changePassword, refreshProfile } = useAuth();
-  const { getStudentProfile, updateUserProfile } = useData();
+  const { user, changePassword, refreshProfile, mustChangePassword, clearMustChangePassword } = useAuth();
+  const { getStudentProfile, updateUserProfile, updateStudentProfile, mockUsers, getUsersByRole } = useData();
   const profile = user?.role === 'student' ? getStudentProfile(user.id) : null;
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(mustChangePassword ? 'security' : 'profile');
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [activeUserPicker, setActiveUserPicker] = useState(null);
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };
 
-  // Profile form
-  const [profileForm, setProfileForm] = useState({ name: user?.name || '', email: user?.email || '', department: user?.department || '' });
+  const needsTitle = ['supervisor', 'coordinator', 'admin'].includes(user?.role);
 
-  // Notification prefs – loaded from user doc
+  // Supervisor/coordinator lists for student profile
+  const supervisors = useMemo(() => getUsersByRole('supervisor'), [getUsersByRole]);
+
+  // Profile form
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || user?.name?.split(' ')[0] || '',
+    surname: user?.surname || user?.name?.split(' ').slice(1).join(' ') || '',
+    title: user?.title || '',
+    researchTitle: user?.researchTitle || profile?.researchTitle || '',
+    programme: user?.programme || profile?.programme || '',
+  });
+
+  // Student academic form
+  const [academicForm, setAcademicForm] = useState({
+    supervisorId: profile?.supervisorId || '',
+    coSupervisorId: profile?.coSupervisorId || '',
+    nominalSupervisorId: profile?.nominalSupervisorId || '',
+    programme: profile?.programme || '',
+    degree: profile?.degree || '',
+  });
+
+  // Sync when profile loads
+  useEffect(() => {
+    if (profile) {
+      setAcademicForm(prev => ({
+        ...prev,
+        supervisorId: profile.supervisorId || '',
+        coSupervisorId: profile.coSupervisorId || '',
+        nominalSupervisorId: profile.nominalSupervisorId || '',
+        programme: profile.programme || prev.programme,
+        degree: profile.degree || prev.degree,
+      }));
+      setProfileForm(prev => ({
+        ...prev,
+        researchTitle: profile.researchTitle || prev.researchTitle,
+        programme: profile.programme || prev.programme,
+      }));
+    }
+  }, [profile]);
+
+  // Notification prefs
   const [notifPrefs, setNotifPrefs] = useState({
     statusChanges: true, deadlines: true, committee: true, newReviews: true,
   });
-
-  // Load saved notification prefs from user doc
   useEffect(() => {
-    if (user?.notificationPrefs) {
-      setNotifPrefs(prev => ({ ...prev, ...user.notificationPrefs }));
-    }
+    if (user?.notificationPrefs) setNotifPrefs(prev => ({ ...prev, ...user.notificationPrefs }));
   }, [user?.notificationPrefs]);
 
   // Password form
@@ -48,10 +86,27 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     setSaving(true);
     try {
+      const fullName = profileForm.title
+        ? `${profileForm.title} ${profileForm.firstName} ${profileForm.surname}`.trim()
+        : `${profileForm.firstName} ${profileForm.surname}`.trim();
       await updateUserProfile(user.id, {
-        name: profileForm.name.trim(),
-        department: profileForm.department.trim(),
+        name: fullName,
+        firstName: profileForm.firstName.trim(),
+        surname: profileForm.surname.trim(),
+        title: profileForm.title,
+        researchTitle: profileForm.researchTitle.trim(),
+        programme: profileForm.programme,
       });
+      if (user.role === 'student' && profile) {
+        await updateStudentProfile(user.id, {
+          supervisorId: academicForm.supervisorId || null,
+          coSupervisorId: academicForm.coSupervisorId || null,
+          nominalSupervisorId: academicForm.nominalSupervisorId || null,
+          programme: academicForm.programme || profileForm.programme,
+          degree: academicForm.degree,
+          researchTitle: profileForm.researchTitle.trim(),
+        });
+      }
       await refreshProfile();
       showToast('Profile updated successfully');
     } catch (err) {
@@ -85,6 +140,10 @@ export default function SettingsPage() {
       if (!result.success) {
         setPwError(result.error);
       } else {
+        if (mustChangePassword) {
+          await updateUserProfile(user.id, { mustChangePassword: false });
+          clearMustChangePassword();
+        }
         setPwForm({ current: '', newPw: '', confirm: '' });
         showToast('Password updated successfully');
       }
@@ -93,6 +152,29 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const supervisorName = (id) => {
+    const s = mockUsers.find(u => u.id === id);
+    return s ? getDisplayName(s) : '';
+  };
+
+  const handlePickSupervisor = (pickedUser) => {
+    if (!activeUserPicker || !pickedUser) return;
+    if (activeUserPicker === 'supervisorId') {
+      setAcademicForm(prev => ({
+        ...prev,
+        supervisorId: pickedUser.id,
+        nominalSupervisorId: prev.nominalSupervisorId === pickedUser.id ? '' : prev.nominalSupervisorId,
+      }));
+    } else {
+      setAcademicForm(prev => ({ ...prev, [activeUserPicker]: pickedUser.id }));
+    }
+    setActiveUserPicker(null);
+  };
+
+  const clearSupervisorField = (field) => {
+    setAcademicForm(prev => ({ ...prev, [field]: '' }));
   };
 
   const tabs = [
@@ -105,9 +187,17 @@ export default function SettingsPage() {
     <div className="page-wrapper">
       {toast && <div className={`toast toast-${toast.v}`}>{toast.msg}</div>}
 
+      {/* First-login forced password change banner */}
+      {mustChangePassword && (
+        <div style={{ background: 'var(--status-warning-bg)', color: 'var(--status-warning)', padding: '14px 20px', borderRadius: 'var(--radius-lg)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 14 }}>
+          <HiOutlineExclamationTriangle style={{ fontSize: 22, flexShrink: 0 }} />
+          You must change your temporary password before continuing. Please update your password in the Security tab below.
+        </div>
+      )}
+
       <div className="page-header">
         <h1>Settings</h1>
-        <p>Manage your account preferences</p>
+        <p>Manage your account and profile</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 'var(--space-xl)' }}>
@@ -121,74 +211,163 @@ export default function SettingsPage() {
 
         <div>
           {activeTab === 'profile' && (
-            <Card>
-              <CardHeader title="Profile Information" icon={<HiOutlineUser />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)" />
-              <CardBody>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
-                  <Avatar name={user?.name} size="xl" />
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{user?.name}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{ROLE_LABELS[user?.role]}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{user?.email}</div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">Full Name</label>
-                    <input className="form-input" value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Email</label>
-                    <input className="form-input" value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Department</label>
-                    <input className="form-input" value={profileForm.department} onChange={e => setProfileForm({ ...profileForm, department: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Role</label>
-                    <input className="form-input" defaultValue={ROLE_LABELS[user?.role]} readOnly style={{ background: 'var(--bg-secondary)' }} />
-                  </div>
-                  {user?.studentNumber && (
-                    <div className="form-group">
-                      <label className="form-label">Student Number</label>
-                      <input className="form-input" defaultValue={user.studentNumber} readOnly style={{ background: 'var(--bg-secondary)' }} />
+            <>
+              {/* ── Research Title Banner (students) ── */}
+              {user?.role === 'student' && (
+                <Card style={{ marginBottom: 'var(--space-lg)' }}>
+                  <CardBody>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                      <HiOutlineDocumentText style={{ fontSize: 28, color: 'var(--uwc-navy)', flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1 }}>
+                        <label className="form-label" style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Research Title</label>
+                        <input
+                          className="form-input"
+                          placeholder="Title pending submission"
+                          value={profileForm.researchTitle}
+                          onChange={e => setProfileForm({ ...profileForm, researchTitle: e.target.value })}
+                          style={{ fontSize: 15, fontWeight: 500 }}
+                        />
+                        {!profileForm.researchTitle && (
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, fontStyle: 'italic' }}>
+                            Enter your research title once confirmed with your supervisor.
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </CardBody>
+                </Card>
+              )}
 
-                {profile && (
-                  <div style={{ marginTop: 32 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <HiOutlineAcademicCap /> Academic Details
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <Card>
+                <CardHeader title="Profile Information" icon={<HiOutlineUser />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)" />
+                <CardBody>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
+                    <Avatar name={getDisplayName(user)} size="xl" />
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>{getDisplayName(user)}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{ROLE_LABELS[user?.role]}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{user?.email}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    {/* Title (for supervisors/coordinators/admins) */}
+                    {needsTitle && (
+                      <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <label className="form-label">Title</label>
+                        <select className="form-select" value={profileForm.title} onChange={e => setProfileForm({ ...profileForm, title: e.target.value })}>
+                          <option value="">— Select —</option>
+                          {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    <div className="form-group">
+                      <label className="form-label">First Name</label>
+                      <input className="form-input" value={profileForm.firstName} onChange={e => setProfileForm({ ...profileForm, firstName: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Surname</label>
+                      <input className="form-input" value={profileForm.surname} onChange={e => setProfileForm({ ...profileForm, surname: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input className="form-input" value={user?.email || ''} readOnly disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Email cannot be changed</div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Role</label>
+                      <input className="form-input" defaultValue={ROLE_LABELS[user?.role]} readOnly disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                    </div>
+                    {user?.studentNumber && (
+                      <div className="form-group">
+                        <label className="form-label">Student Number</label>
+                        <input className="form-input" defaultValue={user.studentNumber} readOnly disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                      </div>
+                    )}
+                    {/* Programme for students */}
+                    {user?.role === 'student' && (
                       <div className="form-group">
                         <label className="form-label">Programme</label>
-                        <input className="form-input" defaultValue={profile.programme} readOnly style={{ background: 'var(--bg-secondary)' }} />
+                        <select className="form-select" value={profileForm.programme} onChange={e => setProfileForm({ ...profileForm, programme: e.target.value })}>
+                          <option value="">— Select Programme —</option>
+                          {PROGRAMME_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
                       </div>
-                      <div className="form-group">
-                        <label className="form-label">Degree</label>
-                        <input className="form-input" defaultValue={profile.degree} readOnly style={{ background: 'var(--bg-secondary)' }} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Registration Date</label>
-                        <input className="form-input" defaultValue={formatDate(profile.registrationDate)} readOnly style={{ background: 'var(--bg-secondary)' }} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Years Registered</label>
-                        <input className="form-input" defaultValue={profile.yearsRegistered} readOnly style={{ background: 'var(--bg-secondary)' }} />
+                    )}
+                  </div>
+
+                  {/* ── Academic Details (students) ── */}
+                  {user?.role === 'student' && profile && (
+                    <div style={{ marginTop: 32 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <HiOutlineAcademicCap /> Academic Details
+                      </h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                        <div className="form-group">
+                          <label className="form-label">Supervisor</label>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'flex-start' }} onClick={() => setActiveUserPicker('supervisorId')}>
+                              {academicForm.supervisorId ? supervisorName(academicForm.supervisorId) : 'Select Supervisor'}
+                            </button>
+                            {academicForm.supervisorId && (
+                              <button className="btn btn-ghost" onClick={() => clearSupervisorField('supervisorId')}>Clear</button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Co-Supervisor</label>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'flex-start' }} onClick={() => setActiveUserPicker('coSupervisorId')}>
+                              {academicForm.coSupervisorId ? supervisorName(academicForm.coSupervisorId) : 'Select Co-Supervisor'}
+                            </button>
+                            {academicForm.coSupervisorId && (
+                              <button className="btn btn-ghost" onClick={() => clearSupervisorField('coSupervisorId')}>Clear</button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Nominal Supervisor</label>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'flex-start' }} onClick={() => setActiveUserPicker('nominalSupervisorId')}>
+                              {academicForm.nominalSupervisorId ? supervisorName(academicForm.nominalSupervisorId) : 'Select Nominal Supervisor'}
+                            </button>
+                            {academicForm.nominalSupervisorId && (
+                              <button className="btn btn-ghost" onClick={() => clearSupervisorField('nominalSupervisorId')}>Clear</button>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            A nominal supervisor is assigned when the main supervisor is external.
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Degree</label>
+                          <select className="form-select" value={academicForm.degree} onChange={e => setAcademicForm({ ...academicForm, degree: e.target.value })}>
+                            <option value="">— Select —</option>
+                            <option value="MSc">MSc</option>
+                            <option value="PhD">PhD</option>
+                            <option value="MA">MA</option>
+                            <option value="MPhil">MPhil</option>
+                            <option value="DPhil">DPhil</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Registration Date</label>
+                          <input className="form-input" defaultValue={formatDate(profile.registrationDate)} readOnly disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Years Registered</label>
+                          <input className="form-input" defaultValue={profile.yearsRegistered} readOnly disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <div style={{ marginTop: 24 }}>
-                  <button className="btn btn-primary" onClick={handleProfileSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
-                </div>
-              </CardBody>
-            </Card>
+                  <div style={{ marginTop: 24 }}>
+                    <button className="btn btn-primary" onClick={handleProfileSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+                  </div>
+                </CardBody>
+              </Card>
+            </>
           )}
 
           {activeTab === 'notifications' && (
@@ -252,6 +431,27 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {user?.role === 'student' && (
+        <UserPicker
+          isOpen={!!activeUserPicker}
+          onClose={() => setActiveUserPicker(null)}
+          onSelect={handlePickSupervisor}
+          users={supervisors}
+          title={
+            activeUserPicker === 'supervisorId' ? 'Select Supervisor'
+              : activeUserPicker === 'coSupervisorId' ? 'Select Co-Supervisor'
+              : 'Select Nominal Supervisor'
+          }
+          roleFilter={['supervisor']}
+          excludeIds={[
+            ...(activeUserPicker === 'supervisorId' ? [academicForm.coSupervisorId, academicForm.nominalSupervisorId] : []),
+            ...(activeUserPicker === 'coSupervisorId' ? [academicForm.supervisorId] : []),
+            ...(activeUserPicker === 'nominalSupervisorId' ? [academicForm.supervisorId] : []),
+          ].filter(Boolean)}
+          selectedId={activeUserPicker ? academicForm[activeUserPicker] : null}
+        />
+      )}
     </div>
   );
 }

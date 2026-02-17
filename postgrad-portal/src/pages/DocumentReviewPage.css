@@ -296,6 +296,10 @@
   cursor: pointer;
   font-weight: 600;
 }
+.doc-card-badge--annotation {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
 
 /* ── Comment Thread ── */
 .comment-thread {

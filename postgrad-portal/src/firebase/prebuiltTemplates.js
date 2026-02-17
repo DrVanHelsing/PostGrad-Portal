@@ -20,12 +20,7 @@ function studentInfoFields(startRow = 1) {
     { id: 'student_number', type: 'auto_populated', label: 'Student Number', autoPopulate: { source: 'user', field: 'studentNumber' }, width: 'half', row: startRow, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
     { id: 'surname', type: 'auto_populated', label: 'Surname', autoPopulate: { source: 'user', field: 'surname' }, width: 'half', row: startRow, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
     { id: 'first_names', type: 'auto_populated', label: 'First Names', autoPopulate: { source: 'user', field: 'firstName' }, width: 'half', row: startRow + 1, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
-    { id: 'department', type: 'auto_populated', label: 'Department', autoPopulate: { source: 'studentProfile', field: 'department' }, width: 'half', row: startRow + 1, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
-    { id: 'degree', type: 'select', label: 'Degree', options: [
-      { value: 'msc', label: 'MSc' }, { value: 'msc_structured', label: 'MSc (Structured)' },
-      { value: 'phd', label: 'PhD' }, { value: 'dphil', label: 'DPhil' },
-      { value: 'ma', label: 'MA' }, { value: 'mcom', label: 'MCom' },
-    ], width: 'half', row: startRow + 2, required: true },
+    { id: 'degree', type: 'auto_populated', label: 'Degree', autoPopulate: { source: 'studentProfile', field: 'degree' }, width: 'half', row: startRow + 1, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
     { id: 'programme', type: 'auto_populated', label: 'Programme', autoPopulate: { source: 'studentProfile', field: 'programme' }, width: 'half', row: startRow + 2, required: true, readOnlyForRoles: ['student', 'supervisor', 'coordinator'] },
   ];
 }
@@ -152,7 +147,7 @@ export const TITLE_REGISTRATION = {
     templatePath: '/templates/title_registration_2026.docx',
     fieldMapping: {
       student_number: 'student_number', surname: 'surname', first_names: 'first_names',
-      department: 'department', degree: 'degree', programme: 'programme',
+      degree: 'degree', programme: 'programme',
       proposed_title: 'proposed_title', keywords: 'keyword_list',
       research_description: 'research_description',
     },
@@ -277,6 +272,34 @@ export const PROGRESS_REPORT = {
       signatureLabel: 'Signature of Coordinator',
       showBorder: true,
       fields: coordinatorReviewFields(),
+    },
+    {
+      id: 'section_c_fhd_assessment',
+      title: 'SECTION C – FHD COMMITTEE ASSESSMENT',
+      assignedRole: 'coordinator',
+      order: 5,
+      layoutMode: 'flow',
+      requiresSignature: true,
+      signatureLabel: 'Signature of Chairperson, FHD Committee',
+      showBorder: true,
+      borderLabel: 'SECTION C – FOR 3RD YEAR MSc / 5TH YEAR PhD STUDENTS ONLY',
+      conditionalOn: { source: 'studentProfile', operator: 'year_threshold', degreeField: 'degree', yearField: 'yearsRegistered', mscYear: 3, phdYear: 5 },
+      helpText: 'This section is only required for MSc students in their 3rd year or PhD students in their 5th year of registration.',
+      fields: [
+        { id: 'fhd_progress_evaluation', type: 'select', label: 'FHD Progress Evaluation', options: [
+          { value: 'satisfactory', label: 'Satisfactory – Continue registration' },
+          { value: 'conditional', label: 'Conditional – Continue with specific conditions' },
+          { value: 'unsatisfactory', label: 'Unsatisfactory – Recommend discontinuation' },
+        ], width: 'full', row: 1, required: true },
+        { id: 'fhd_conditions', type: 'textarea', label: 'Conditions / Interventions Required', placeholder: 'Specify any conditions, interventions, or requirements...', width: 'full', row: 2, conditionalOn: { fieldId: 'fhd_progress_evaluation', operator: 'not_equals', value: 'satisfactory' } },
+        { id: 'fhd_timeline_extension', type: 'select', label: 'Extension Recommendation', options: [
+          { value: 'none', label: 'No Extension Required' },
+          { value: '6_months', label: '6 Month Extension' },
+          { value: '12_months', label: '12 Month Extension' },
+        ], width: 'half', row: 3, required: true },
+        { id: 'fhd_committee_comments', type: 'textarea', label: 'Committee Comments', placeholder: 'Additional comments from the FHD Committee...', width: 'full', row: 4 },
+        { id: 'fhd_decision_date', type: 'auto_populated', label: 'Date', autoPopulate: { source: 'system', field: 'currentDate' }, width: 'half', row: 5 },
+      ],
     },
   ],
   requiredAttachments: [],
@@ -1262,7 +1285,80 @@ export const FHD_CHECKLIST = {
 
 
 // ════════════════════════════════════════════════════════════
-// MASTER EXPORT: All 20 templates in order
+// TEMPLATE 21: MSc to PhD Transition
+// ════════════════════════════════════════════════════════════
+export const MSC_TO_PHD_TRANSITION = {
+  name: 'MSc to PhD Transition',
+  slug: 'msc_to_phd_transition',
+  category: 'registration',
+  description: 'Application form for eligible MSc students to transition directly to a PhD programme.',
+  initiatorRoles: ['student'],
+  isPrebuilt: true,
+  sourceDocx: 'MSc to PhD Transition 2026.docx',
+  layout: {
+    header: { ...UWC_HEADER, formTitle: 'APPLICATION: MSc TO PhD TRANSITION', formCode: 'FHD-MPT-2026' },
+    style: 'document',
+    showWatermark: true,
+  },
+  sections: [
+    {
+      id: 'student_details', title: 'STUDENT DETAILS', assignedRole: 'student', order: 1,
+      layoutMode: 'table', requiresSignature: false,
+      fields: [
+        ...studentInfoFields(),
+        { id: 'registration_date', type: 'auto_populated', label: 'Registration Date', autoPopulate: { source: 'studentProfile', field: 'registrationDate' }, width: 'half', row: 4, readOnlyForRoles: ['student'] },
+        { id: 'years_registered', type: 'auto_populated', label: 'Years Registered', autoPopulate: { source: 'studentProfile', field: 'yearsRegistered' }, width: 'half', row: 4, readOnlyForRoles: ['student'] },
+      ],
+    },
+    {
+      id: 'eligibility_declaration', title: 'ELIGIBILITY & MOTIVATION', assignedRole: 'student', order: 2,
+      layoutMode: 'flow', requiresSignature: true, signatureLabel: 'Signature of Student', showBorder: true,
+      fields: [
+        { id: 'current_thesis_title', type: 'auto_populated', label: 'Current MSc Thesis Title', autoPopulate: { source: 'studentProfile', field: 'thesisTitle' }, width: 'full', row: 1 },
+        { id: 'proposed_phd_title', type: 'textarea', label: 'Proposed PhD Thesis Title', placeholder: 'If different from MSc title...', width: 'full', row: 2 },
+        { id: 'transition_motivation', type: 'textarea', label: 'Motivation for Transition', placeholder: 'Explain why you wish to transition from MSc to PhD, including how your MSc research has led to questions or scope warranting doctoral study...', width: 'full', row: 3, required: true, validation: { minLength: 250, message: 'Please provide a detailed motivation (min 250 chars)' } },
+        { id: 'msc_progress_summary', type: 'textarea', label: 'Summary of MSc Progress', placeholder: 'Summarise your research progress, findings, and any publications or outputs to date...', width: 'full', row: 4, required: true, validation: { minLength: 150, message: 'Min 150 characters required' } },
+        { id: 'phd_research_plan', type: 'textarea', label: 'Extended Research Plan for PhD', placeholder: 'Provide an outline of your proposed PhD research plan, including objectives, methodology, and expected timeline...', width: 'full', row: 5, required: true },
+        { id: 'expected_phd_duration', type: 'select', label: 'Expected PhD Duration', options: [
+          { value: '2_years', label: '2 Years' },
+          { value: '3_years', label: '3 Years' },
+          { value: '4_years', label: '4 Years' },
+        ], width: 'half', row: 6, required: true },
+        { id: 'student_transition_date', type: 'auto_populated', label: 'Date', autoPopulate: { source: 'system', field: 'currentDate' }, width: 'half', row: 6 },
+      ],
+    },
+    {
+      id: 'supervisor_review', title: 'SUPERVISOR RECOMMENDATION', assignedRole: 'supervisor', order: 3,
+      layoutMode: 'flow', requiresSignature: true, signatureLabel: 'Signature of Supervisor', showBorder: true,
+      borderLabel: 'FOR SUPERVISOR',
+      fields: [
+        { id: 'sup_confirms_eligibility', type: 'checkbox', label: 'I confirm this student meets the eligibility criteria for MSc to PhD transition', width: 'full', row: 1, required: true },
+        { id: 'sup_academic_readiness', type: 'select', label: 'Academic Readiness Assessment', options: [
+          { value: 'excellent', label: 'Excellent – Fully ready for doctoral study' },
+          { value: 'good', label: 'Good – Ready with minor preparation needed' },
+          { value: 'adequate', label: 'Adequate – Conditional readiness' },
+          { value: 'not_ready', label: 'Not Ready – Requires further MSc work' },
+        ], width: 'full', row: 2, required: true },
+        ...supervisorReviewFields(),
+      ],
+    },
+    {
+      id: 'coordinator_review', title: 'COORDINATOR RECOMMENDATION', assignedRole: 'coordinator', order: 4,
+      layoutMode: 'table', requiresSignature: true, signatureLabel: 'Signature of Coordinator', showBorder: true,
+      fields: coordinatorReviewFields(),
+    },
+  ],
+  requiredAttachments: [
+    { label: 'Updated Research Proposal (PhD)', fileTypes: ['.pdf', '.docx'], required: true },
+    { label: 'MSc Progress Report / Evidence of Work', fileTypes: ['.pdf', '.docx'], required: true },
+  ],
+  linkedForms: ['upgrade_masters_to_doctoral'],
+  exportConfig: { templatePath: '/templates/msc_to_phd_transition_2026.docx' },
+};
+
+
+// ════════════════════════════════════════════════════════════
+// MASTER EXPORT: All 21 templates in order
 // ════════════════════════════════════════════════════════════
 export const ALL_PREBUILT_TEMPLATES = [
   TITLE_REGISTRATION,
@@ -1285,4 +1381,5 @@ export const ALL_PREBUILT_TEMPLATES = [
   OTHER_REQUEST,
   NS_HIGHER_DEGREES_COVER,
   FHD_CHECKLIST,
+  MSC_TO_PHD_TRANSITION,
 ];

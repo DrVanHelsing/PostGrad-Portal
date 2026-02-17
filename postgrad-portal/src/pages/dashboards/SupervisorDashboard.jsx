@@ -1,11 +1,12 @@
 // ============================================
-// Supervisor Dashboard – with Nudge + Historical view
+// Supervisor Dashboard – Nudge, Historical view, Calendar widget
 // ============================================
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, Avatar, EmptyState, Modal } from '../../components/common';
+import CalendarWidget from '../../components/CalendarWidget';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, STUDENT_STATUS_CONFIG, MILESTONE_TYPE_LABELS } from '../../utils/constants';
 import { formatDate, formatRelativeTime } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +24,7 @@ import {
 
 export default function SupervisorDashboard() {
   const { user } = useAuth();
-  const { getRequestsForSupervisor, getStudentsForSupervisor, mockHDRequests, nudgeStudent, getUserById, mockMilestones } = useData();
+  const { getRequestsForSupervisor, getStudentsForSupervisor, mockHDRequests, nudgeStudent, getUserById, mockMilestones, getThesisSubmissionsForSupervisor } = useData();
   const navigate = useNavigate();
 
   const pendingReviews = useMemo(() => getRequestsForSupervisor(user.id), [user.id, getRequestsForSupervisor]);
@@ -43,6 +44,9 @@ export default function SupervisorDashboard() {
   const historicalRequests = useMemo(() =>
     allMyRequests.filter(r => ['approved', 'recommended'].includes(r.status)),
   [allMyRequests]);
+
+  const thesisSubmissions = useMemo(() => getThesisSubmissionsForSupervisor(user.id), [user.id, getThesisSubmissionsForSupervisor]);
+  const pendingThesis = thesisSubmissions.filter(t => ['submitted', 'under_review'].includes(t.status));
 
   const handleNudge = () => {
     if (!nudgeTarget) return;
@@ -65,7 +69,7 @@ export default function SupervisorDashboard() {
 
       <div className="dashboard-welcome">
         <h1>Welcome, {user.name}</h1>
-        <p>{user.department} | Supervising {students.length} student{students.length !== 1 ? 's' : ''}</p>
+        <p>Supervising {students.length} student{students.length !== 1 ? 's' : ''}</p>
       </div>
 
       <div className="stats-grid">
@@ -75,96 +79,128 @@ export default function SupervisorDashboard() {
         <StatCard label="Approved Requests" value={completedCount} icon={<HiOutlineCheckCircle />} color="var(--status-success)" bg="var(--status-success-bg)" />
       </div>
 
-      <div className="content-grid">
-        {/* Requests needing review */}
-        <Card>
-          <CardHeader title="Requests for Review" icon={<HiOutlineDocumentText />} iconBg="var(--status-warning-bg)" iconColor="var(--status-warning)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>View all <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {pendingReviews.length === 0 ? (
-              <EmptyState icon={<HiOutlineDocumentText />} title="No pending reviews" description="You're all caught up" />
-            ) : (
-              pendingReviews.map((r) => (
-                <div key={r.id} className="request-list-item">
-                  <div className="request-list-info">
-                    <div className="request-list-title">{r.title}</div>
-                    <div className="request-list-meta">
-                      <span>{r.studentName}</span>
-                      <span className="request-list-meta-sep" />
-                      <span>{REQUEST_TYPE_LABELS[r.type]}</span>
-                      <span className="request-list-meta-sep" />
-                      <span>{formatRelativeTime(r.updatedAt)}</span>
+      <div className="supervisor-dashboard-grid">
+        <div className="supervisor-dashboard-col">
+          {/* Requests needing review */}
+          <Card>
+            <CardHeader title="Requests for Review" icon={<HiOutlineDocumentText />} iconBg="var(--status-warning-bg)" iconColor="var(--status-warning)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>View all <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {pendingReviews.length === 0 ? (
+                <EmptyState icon={<HiOutlineDocumentText />} title="No pending reviews" description="You're all caught up" />
+              ) : (
+                pendingReviews.map((r) => (
+                  <div key={r.id} className="request-list-item">
+                    <div className="request-list-info">
+                      <div className="request-list-title">{r.title}</div>
+                      <div className="request-list-meta">
+                        <span>{r.studentName}</span>
+                        <span className="request-list-meta-sep" />
+                        <span>{REQUEST_TYPE_LABELS[r.type]}</span>
+                        <span className="request-list-meta-sep" />
+                        <span>{formatRelativeTime(r.updatedAt)}</span>
+                      </div>
                     </div>
+                    <StatusBadge status={r.status} />
                   </div>
-                  <StatusBadge status={r.status} />
-                </div>
-              ))
-            )}
-          </CardBody>
-        </Card>
+                ))
+              )}
+            </CardBody>
+          </Card>
 
-        {/* Historical Submissions - moved up to reduce gaps */}
-        <Card>
-          <CardHeader title="Historical Submissions" icon={<HiOutlineArrowPath />} iconBg="var(--status-success-bg)" iconColor="var(--status-success)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => setShowHistorical(true)}>View all <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {historicalRequests.length === 0 ? (
-              <EmptyState icon={<HiOutlineCheckCircle />} title="No completed submissions yet" />
-            ) : (
-              historicalRequests.slice(0, 5).map(r => (
-                <div key={r.id} className="request-list-item">
-                  <div className="request-list-info">
-                    <div className="request-list-title">{r.title}</div>
-                    <div className="request-list-meta">
-                      <span>{r.studentName}</span><span className="request-list-meta-sep" />
-                      <span>{formatDate(r.updatedAt)}</span>
-                    </div>
-                  </div>
-                  <StatusBadge status={r.status} />
-                </div>
-              ))
-            )}
-          </CardBody>
-        </Card>
-
-        {/* My Students - moved down for better visual balance */}
-        <Card>
-          <CardHeader title="My Students" icon={<HiOutlineAcademicCap />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/students')}>View all <HiOutlineArrowRight /></button>} />
-          <CardBody>
-            {students.length === 0 ? (
-              <EmptyState icon={<HiOutlineAcademicCap />} title="No students assigned" />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {students.map((s) => {
-                  const u = getUserById(s.userId);
-                  const cfg = STUDENT_STATUS_CONFIG[s.status];
-                  return (
-                    <div key={s.userId} className="student-card" style={{ position: 'relative' }}>
-                      <Avatar name={u?.name} size="md" />
-                      <div className="student-card-info" style={{ flex: 1 }}>
-                        <div className="student-card-name">{u?.name || s.studentNumber}</div>
-                        <div className="student-card-programme">{s.programme}</div>
-                        <div className="student-card-meta">
-                          <span>Year {s.yearsRegistered}</span>
-                          <span style={{ color: cfg?.color }}>{cfg?.label}</span>
+          {/* My Students */}
+          <Card>
+            <CardHeader title="My Students" icon={<HiOutlineAcademicCap />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/students')}>View all <HiOutlineArrowRight /></button>} />
+            <CardBody>
+              {students.length === 0 ? (
+                <EmptyState icon={<HiOutlineAcademicCap />} title="No students assigned" />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {students.map((s) => {
+                    const u = getUserById(s.userId);
+                    const cfg = STUDENT_STATUS_CONFIG[s.status];
+                    return (
+                      <div key={s.userId} className="student-card" style={{ position: 'relative' }}>
+                        <Avatar name={u?.name} size="md" />
+                        <div className="student-card-info" style={{ flex: 1 }}>
+                          <div className="student-card-name">{u?.name || s.studentNumber}</div>
+                          <div className="student-card-programme">{s.programme}</div>
+                          <div className="student-card-meta">
+                            <span>Year {s.yearsRegistered}</span>
+                            <span style={{ color: cfg?.color }}>{cfg?.label}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                          <button className="btn btn-ghost btn-sm" title="View details" onClick={() => openStudentDetail(s)}><HiOutlineEye /> Details</button>
+                          <button className="btn btn-sm" title="Send a reminder to this student"
+                            style={{ background: 'var(--status-warning-bg)', color: 'var(--status-warning)', border: '1px solid var(--status-warning)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => { setNudgeTarget(s); setShowNudgeModal(true); }}>
+                            <HiOutlineBellAlert /> Nudge
+                          </button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
-                        <button className="btn btn-ghost btn-sm" title="View details" onClick={() => openStudentDetail(s)}><HiOutlineEye /> Details</button>
-                        <button className="btn btn-sm" title="Send a reminder to this student"
-                          style={{ background: 'var(--status-warning-bg)', color: 'var(--status-warning)', border: '1px solid var(--status-warning)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => { setNudgeTarget(s); setShowNudgeModal(true); }}>
-                          <HiOutlineBellAlert /> Nudge
-                        </button>
+                    );
+                  })}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Historical Submissions */}
+          <Card>
+            <CardHeader title="Historical Submissions" icon={<HiOutlineArrowPath />} iconBg="var(--status-success-bg)" iconColor="var(--status-success)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => setShowHistorical(true)}>View all <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {historicalRequests.length === 0 ? (
+                <EmptyState icon={<HiOutlineCheckCircle />} title="No completed submissions yet" />
+              ) : (
+                historicalRequests.slice(0, 5).map(r => (
+                  <div key={r.id} className="request-list-item">
+                    <div className="request-list-info">
+                      <div className="request-list-title">{r.title}</div>
+                      <div className="request-list-meta">
+                        <span>{r.studentName}</span><span className="request-list-meta-sep" />
+                        <span>{formatDate(r.updatedAt)}</span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <StatusBadge status={r.status} />
+                  </div>
+                ))
+              )}
+            </CardBody>
+          </Card>
+        </div>
+
+        <div className="supervisor-dashboard-col">
+          {/* Calendar widget */}
+          <CalendarWidget />
+
+          {/* Submission Reviews */}
+          <Card>
+            <CardHeader title="Submission Reviews" icon={<HiOutlineAcademicCap />} iconBg="var(--uwc-wine-bg, rgba(128,0,0,0.08))" iconColor="var(--uwc-wine, #800000)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/submissions')}>View all <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {pendingThesis.length === 0 ? (
+                <EmptyState icon={<HiOutlineAcademicCap />} title="No pending submissions" description="No submissions awaiting your feedback." />
+              ) : (
+                pendingThesis.slice(0, 5).map(t => (
+                  <div key={t.id} className="request-list-item" style={{ cursor: 'pointer' }} onClick={() => navigate('/submissions')}>
+                    <div className="request-list-info">
+                      <div className="request-list-title">{t.chapterTitle || t.thesisTitle}</div>
+                      <div className="request-list-meta">
+                        <span>{t.studentName}</span><span className="request-list-meta-sep" />
+                        <span>v{t.currentVersion || 1}</span><span className="request-list-meta-sep" />
+                        <span>{formatRelativeTime(t.updatedAt)}</span>
+                      </div>
+                    </div>
+                  <StatusBadge status={t.status} config={{ label: t.status === 'submitted' ? 'Submitted' : 'Under Review', color: 'var(--status-info)', bg: 'var(--status-info-bg)' }} />
+                </div>
+              ))
             )}
           </CardBody>
         </Card>
+      </div>
       </div>
 
       {/* Nudge Modal */}

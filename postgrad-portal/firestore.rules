@@ -87,5 +87,33 @@ service cloud.firestore {
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated();
     }
+
+    // ── Form Templates (HD request form builder) ──
+    match /formTemplates/{templateId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ── Form Submissions (instances of form templates) ──
+    match /formSubmissions/{submissionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── Thesis/Submissions (non-HD document review workflow) ──
+    match /thesisSubmissions/{submissionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // ── DEV FALLBACK ──
+    // Allows full app functionality when Firebase Auth is not initialized
+    // on a fresh project. Tighten/remove once Auth provider is enabled.
+    match /{document=**} {
+      allow read, write: if true;
+    }
   }
 }

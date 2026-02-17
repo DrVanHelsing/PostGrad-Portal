@@ -2,6 +2,34 @@
 // PostGrad Portal – Constants
 // ============================================
 
+/* Title options for supervisor / coordinator / admin users */
+export const TITLE_OPTIONS = ['Prof.', 'Assoc. Prof.', 'Dr.', 'Mr.', 'Mrs.', 'Ms.', 'Mx.'];
+
+/* Additional permissions that can be granted alongside primary role */
+export const PERMISSION_LABELS = {
+  coordinator: 'Coordinator Access',
+  admin: 'Admin Access',
+  supervisor: 'Supervisor Access',
+  reviewer: 'Review Access',
+};
+
+/* Programme options */
+export const PROGRAMME_OPTIONS = [
+  'MSc Computer Science',
+  'PhD Computer Science',
+  'MSc Information Systems',
+  'PhD Information Systems',
+  'MA Information Studies',
+  'MPhil Information Technology',
+  'PhD Information Technology',
+  'MSc Data Science',
+  'PhD Data Science',
+  'MSc Bioinformatics',
+  'PhD Bioinformatics',
+  'MCom Information Systems',
+  'Other',
+];
+
 export const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'var(--text-tertiary)', bg: 'var(--bg-muted)' },
   submitted_to_supervisor: { label: 'Submitted', color: 'var(--status-info)', bg: 'var(--status-info-bg)' },
@@ -16,13 +44,27 @@ export const STATUS_CONFIG = {
 };
 
 export const REQUEST_TYPE_LABELS = {
-  registration: 'Registration',
   title_registration: 'Title Registration',
   progress_report: 'Progress Report',
-  extension: 'Extension',
+  intention_to_submit: 'Intention to Submit',
+  appointment_of_examiners: 'Appointment of Examiners',
+  examiner_summary_cv: 'Examiner Summary CV',
+  change_of_examiners: 'Change of Examiners',
+  appointment_of_arbiter: 'Appointment of Arbiter',
   leave_of_absence: 'Leave of Absence',
-  supervisor_change: 'Supervisor Change',
-  examination_entry: 'Examination Entry',
+  addition_of_co_supervisor: 'Addition of Co-Supervisor',
+  change_of_supervisor: 'Change of Supervisor',
+  removal_of_supervisor: 'Removal of Supervisor',
+  change_of_thesis_title: 'Change of Thesis Title',
+  readmission: 'Readmission',
+  upgrade_masters_to_doctoral: 'Upgrade Masters to Doctoral',
+  mou: 'Memorandum of Understanding',
+  supervisor_profile_rott: 'Supervisor Profile (RoTT)',
+  supervisor_summative_report: 'Supervisor Summative Report',
+  ns_higher_degrees_cover: 'NS Higher Degrees Cover',
+  fhd_checklist: 'FHD Checklist',
+  msc_to_phd_transition: 'MSc to PhD Transition',
+  other_request: 'Other Request',
   other: 'Other',
 };
 
@@ -34,6 +76,12 @@ export const EVENT_TYPE_CONFIG = {
 };
 
 export const MILESTONE_TYPE_LABELS = {
+  proposal: 'Proposal',
+  data_collection: 'Data Collection',
+  writing: 'Writing',
+  submission: 'Submission',
+  review: 'Review',
+  completion: 'Completion',
   conference: 'Conference',
   journal_club: 'Journal Club',
   workshop: 'Workshop',
@@ -129,4 +177,55 @@ export const FORM_TYPE_LABELS = {
   other_request: 'Other Request',
   ns_higher_degrees_cover: 'Natural Sciences Higher Degrees',
   fhd_checklist: 'FHD Submissions Checklist',
+  msc_to_phd_transition: 'MSc to PhD Transition',
 };
+
+/* Forms that explicitly require file uploads / attachments */
+export const FORMS_REQUIRING_ATTACHMENTS = [
+  'appointment_of_examiners',    // Full CV required
+  'examiner_summary_cv',         // CV summary document
+  'leave_of_absence',            // Supporting documentation
+  'supervisor_profile_rott',     // Supervisor profile documents
+  'other_request',               // Ad-hoc attachments
+];
+
+/* Request types for which document annotation UI is enabled */
+export const THESIS_ANNOTATION_REQUEST_TYPES = [
+  'title_registration',
+  'progress_report',
+  'intention_to_submit',
+  'change_of_thesis_title',
+  'appointment_of_examiners',
+  'examiner_summary_cv',
+  'change_of_examiners',
+  'appointment_of_arbiter',
+  'thesis_submission',
+  'upgrade_masters_to_doctoral',
+  'msc_to_phd_transition',
+  'supervisor_summative_report',
+];
+
+/* Concurrent workflow steps – steps that happen in parallel */
+export const CONCURRENT_WORKFLOW_STEPS = {
+  supervisor_review: ['supervisor_review', 'co_supervisor_review'], // Supervisor + Co-supervisor can review concurrently
+};
+
+/* Referral notification timeout in hours */
+export const REFERRAL_NOTIFICATION_HOURS = 48;
+
+/* Helper: check if a user has a permission (either as primary role or additional perm) */
+export function hasPermission(user, perm) {
+  if (!user) return false;
+  if (user.role === perm) return true;
+  if (user.role === 'admin') return true; // Admin has all permissions
+  return user.permissions?.includes(perm) || false;
+}
+
+/* Helper: get display name for user (with title for staff) */
+export function getDisplayName(user) {
+  if (!user) return '—';
+  if (user.title && user.surname) {
+    return `${user.title} ${user.firstName || ''} ${user.surname}`.trim();
+  }
+  return user.name || `${user.firstName || ''} ${user.surname || ''}`.trim() || user.email;
+}

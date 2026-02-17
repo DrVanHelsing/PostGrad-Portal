@@ -93,12 +93,16 @@ const FAQ_DATA = [
       },
       {
         q: 'How long does the approval process take?',
-        a: 'Each stage in the review pipeline has expected turnaround times. Supervisors typically review within 48 hours. The full pipeline from submission to final approval depends on committee meeting schedules. You can track exactly where your request is on the **Submission Tracker** page.',
+        a: 'Each stage in the review pipeline has expected turnaround times. Supervisors typically review within 48 hours. The full pipeline from submission to final approval depends on committee meeting schedules. You can track exactly where your request is on the **Progress Tracker** page.',
         tourLink: 'track-submissions',
       },
       {
         q: 'What happens if my request is referred back?',
         a: 'If your request is referred back, you\'ll receive a notification with the reason. You can then make the necessary amendments and resubmit. The revised submission goes through the review pipeline again.',
+      },
+      {
+        q: 'Can I view submitted forms in read-only mode?',
+        a: 'Yes. On the **HD Requests** page, select any request and click **"View Submitted Form"** (or **"View Form Template"** if no data has been submitted yet). The full multi-section form is displayed in **read-only mode** — all fields are visible but not editable. Every role (Student, Supervisor, Coordinator, Admin) can view all sections of the form, regardless of which role a section is assigned to.',
       },
     ],
   },
@@ -108,11 +112,11 @@ const FAQ_DATA = [
     items: [
       {
         q: 'How do I view document feedback?',
-        a: 'Open any request and navigate to the **Document Review** tab. You can see version history, comments, feedback ratings, and any text annotations left by your supervisor or coordinator. Click on any PDF to open the full viewer.',
+        a: 'Open any request and navigate to the **Document Review** area. You can see version history, comments, feedback ratings, and all reviewer decisions in one place.',
       },
       {
-        q: 'What are document annotations?',
-        a: 'Annotations are text-level feedback that supervisors can leave directly on PDF documents. They highlight specific passages with colour-coded markers and include comments. You can view annotations in the document viewer sidebar.',
+        q: 'When can I use document annotations?',
+        a: 'Annotations are enabled for **thesis-related request types** only. Open a thesis-related document in Document Review and use the annotated viewer to leave precise, text-level feedback.',
         tourLink: 'annotate-documents',
       },
       {
@@ -152,7 +156,7 @@ const FAQ_DATA = [
       },
       {
         q: 'Can I update my profile information?',
-        a: 'Go to **Settings** then the **Profile** tab. You can update your name and department. Your email and role are managed by the system administrator.',
+        a: 'Go to **Settings** then the **Profile** tab. You can update your name, programme details, and supervisor assignments. Your email and role are managed by the system administrator.',
       },
     ],
   },
@@ -162,12 +166,12 @@ const FAQ_DATA = [
     items: [
       {
         q: 'How do I use the Calendar?',
-        a: 'The Calendar shows important dates including HD submission deadlines, committee meetings, and faculty events. Use the month navigator and event type filters to find specific dates.',
+        a: 'The dashboard calendar widget shows important dates including HD submission deadlines, committee meetings, and faculty events. Use month navigation and event controls directly in the widget.',
         tourLink: 'use-calendar',
       },
       {
-        q: 'What is the Submission Tracker?',
-        a: 'The Submission Tracker is a visual pipeline view showing where each HD request is in the approval process. Each column represents a stage, and you can click on any card to view its details.',
+        q: 'What is the Progress Tracker?',
+        a: 'The Progress Tracker combines submission pipeline tracking and milestone history in one place. Use filters to focus on statuses and reveal detailed timelines only when needed.',
         tourLink: 'track-submissions',
       },
     ],
@@ -180,6 +184,19 @@ const FAQ_DATA = [
         q: 'How do I manage user roles? (Admin only)',
         a: 'Navigate to **Role Management** from the sidebar. You can view all users, change their roles, and manage access permissions. All role changes are logged in the audit trail.',
         tourLink: 'manage-roles',
+      },
+      {
+        q: 'How do I create a single user? (Admin only)',
+        a: 'On the **Role Management** page, click **"Create User"**. Fill in the first name, surname, email, role, and any optional fields (title, student number, organisation). Generate a temporary password and click **Create User**. The user receives an Auth account and portal profile.',
+      },
+      {
+        q: 'How do I bulk-import users from a CSV file? (Admin only)',
+        a: 'On the **Role Management** page, click **"Import CSV"**. Upload a CSV file with the required columns: `firstName`, `surname`, `email`, `role`. Optional columns: `title`, `studentNumber`, `organization`.\n\nValid roles: `student`, `supervisor`, `coordinator`, `admin`, `external`, `examiner`.\n\nThe system validates every row before importing. Valid rows are created with auto-generated temporary passwords. A results summary shows which users were created and which failed.\n\nYou can download a sample CSV template directly from the import dialog.',
+        tourLink: 'csv-import',
+      },
+      {
+        q: 'What CSV format is required for bulk user import?',
+        a: 'The CSV file must:\n\n• Have a **header row** with column names\n• Include **required columns**: `firstName`, `surname`, `email`, `role`\n• Optionally include: `title`, `studentNumber`, `organization`\n• Use **comma-separated values** (standard CSV)\n• Emails must be **unique** within the file and not already registered\n• Roles must be one of: `student`, `supervisor`, `coordinator`, `admin`, `external`, `examiner`\n\n**Example:**\n```\nfirstName,surname,email,role,title,studentNumber,organization\nJohn,Doe,john@uwc.ac.za,student,,,3847562\nDr. Jane,Smith,jane@uwc.ac.za,supervisor,Dr.,,\n```',
       },
       {
         q: 'How do I access audit logs? (Coordinator/Admin)',
@@ -410,6 +427,68 @@ Both themes maintain proper contrast ratios for readability. The gold accent col
 ### Calendar Management
 - Create and manage institution-wide events and deadlines
 - Events are visible to all relevant users based on their role`,
+  },
+  {
+    id: 'csv-import-guide',
+    title: 'Bulk User Import (CSV)',
+    icon: <HiOutlineUserGroup />,
+    description: 'How to prepare a CSV file and bulk-create user accounts in the portal.',
+    roles: ['admin'],
+    content: `## Bulk User Import via CSV
+
+### Overview
+Administrators can create multiple user accounts at once by uploading a CSV (Comma-Separated Values) file. This is ideal for onboarding cohorts of students, adding new staff, or migrating users from another system.
+
+### CSV File Format
+
+Your CSV must include a **header row** followed by one row per user.
+
+**Required columns** (case-insensitive):
+| Column | Description |
+|--------|-------------|
+| firstName | User's first name |
+| surname | User's surname / last name |
+| email | Unique email address (used for login) |
+| role | One of: student, supervisor, coordinator, admin, external, examiner |
+
+**Optional columns:**
+| Column | Description |
+|--------|-------------|
+| title | Academic title (e.g. Prof., Dr., Mr., Ms.) — applies to supervisor/coordinator/admin |
+| studentNumber | Student number — applies to student role only |
+| organization | Organisation / affiliation — applies to external/examiner roles only |
+
+### Example CSV
+\`\`\`
+firstName,surname,email,role,title,studentNumber,organization
+John,Doe,john.doe@uwc.ac.za,student,,,3847562
+Jane,Smith,jane.smith@uwc.ac.za,supervisor,Dr.,,
+External,Reviewer,reviewer@uct.ac.za,examiner,Prof.,,University of Cape Town
+Alice,Johnson,alice.j@uwc.ac.za,coordinator,Ms.,,
+\`\`\`
+
+### Step-by-Step Import Process
+
+1. Go to **Role Management** from the sidebar
+2. Click the **"Import CSV"** button (next to "Create User")
+3. Optionally click **"Download CSV Template"** to get a pre-formatted file
+4. Click **"Select CSV File"** and choose your CSV
+5. The system parses and validates every row:
+   - **Valid** rows show a green checkmark
+   - **Invalid** rows show a warning with the specific error (missing fields, invalid email, duplicate, unknown role)
+6. Review the preview table — invalid rows will be skipped automatically
+7. Click **"Import Users"** to begin creation
+8. A progress bar shows real-time progress
+9. After completion, a results summary shows:
+   - **Successfully created** users with their temporary passwords
+   - **Failed** users with error messages
+
+### Important Notes
+- Each user receives an auto-generated **temporary password** displayed in the results
+- Users must change their password on first login
+- Duplicate emails (within the CSV or already in the system) are rejected
+- The import processes users **sequentially** to ensure reliable account creation
+- You can copy individual temporary passwords from the results table`,
   },
 ];
 

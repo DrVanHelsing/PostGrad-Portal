@@ -1,18 +1,18 @@
 // ============================================
-// Coordinator Dashboard – with Export + FHD/SHD links
+// Coordinator Dashboard – Export, FHD/SHD links, Calendar widget
 // ============================================
 
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { StatCard, Card, CardHeader, CardBody, StatusBadge, EmptyState } from '../../components/common';
+import CalendarWidget from '../../components/CalendarWidget';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS } from '../../utils/constants';
 import { formatDate, formatRelativeTime } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineDocumentText,
   HiOutlineUserGroup,
-  HiOutlineCalendarDays,
   HiOutlineArrowRight,
   HiOutlineClipboardDocumentList,
   HiOutlineCheckCircle,
@@ -23,16 +23,13 @@ import {
 
 export default function CoordinatorDashboard() {
   const { user } = useAuth();
-  const { getRequestsForCoordinator, mockHDRequests, mockStudentProfiles, mockCalendarEvents, exportToCSV, downloadCSV, getUserById } = useData();
+  const { getRequestsForCoordinator, mockHDRequests, mockStudentProfiles, exportToCSV, downloadCSV, getUserById } = useData();
   const navigate = useNavigate();
 
   const coordinatorRequests = useMemo(() => getRequestsForCoordinator(), [getRequestsForCoordinator]);
   const fhdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'fhd_pending'), [mockHDRequests]);
   const shdPending = useMemo(() => mockHDRequests.filter((r) => r.status === 'shd_pending'), [mockHDRequests]);
   const totalStudents = mockStudentProfiles.length;
-  const upcomingEvents = useMemo(() =>
-    mockCalendarEvents.filter((e) => new Date(e.date) >= new Date()).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 4),
-  [mockCalendarEvents]);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, v = 'success') => { setToast({ msg, v }); setTimeout(() => setToast(null), 3000); };
@@ -65,7 +62,7 @@ export default function CoordinatorDashboard() {
 
       <div className="dashboard-welcome">
         <h1>Welcome, {user.name}</h1>
-        <p>{user.department} | Postgraduate Coordinator</p>
+        <p>Postgraduate Coordinator</p>
       </div>
 
       <div className="stats-grid">
@@ -137,24 +134,8 @@ export default function CoordinatorDashboard() {
           </CardBody>
         </Card>
 
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader title="Upcoming Events" icon={<HiOutlineCalendarDays />} iconBg="var(--status-warning-bg)" iconColor="var(--status-warning)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/calendar')}>Calendar <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {upcomingEvents.map((evt) => (
-              <div key={evt.id} className="request-list-item">
-                <div className="request-list-info">
-                  <div className="request-list-title">{evt.title}</div>
-                  <div className="request-list-meta">
-                    <span>{formatDate(evt.date)}</span>
-                    {evt.time && (<><span className="request-list-meta-sep" /><span>{evt.time}</span></>)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
+        {/* Calendar widget with event management */}
+        <CalendarWidget showManage />
       </div>
     </div>
   );

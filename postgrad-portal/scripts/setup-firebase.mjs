@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import https from 'https';
 import http from 'http';
 
-const PROJECT_ID = 'pg-portal1';
+const PROJECT_ID = 'postgrad-portal';
 const FIREBASE_CLIENT_ID = '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com';
 const FIREBASE_CLIENT_SECRET = 'j9iVZfS8kkCEFUPaAeJV0sAi'; // Firebase CLI public secret
 
@@ -177,7 +177,7 @@ async function createFirestoreDb(token) {
   // If all fail, give manual instructions
   console.warn('\n  ⚠ Could not create Firestore database automatically.');
   console.warn('  Please create it manually:');
-  console.warn('  1. Go to https://console.firebase.google.com/project/pg-portal1/firestore');
+  console.warn('  1. Go to https://console.firebase.google.com/project/postgrad-portal/firestore');
   console.warn('  2. Click "Create database"');
   console.warn('  3. Choose "Start in test mode"');
   console.warn('  4. Select "us-east1" (or any region)');
@@ -397,7 +397,7 @@ async function triggerSeed() {
 async function main() {
   console.log('╔════════════════════════════════════════════════╗');
   console.log('║   Firebase Setup for PostGrad Portal           ║');
-  console.log('║   Project: pg-portal1                          ║');
+  console.log('║   Project: postgrad-portal                     ║');
   console.log('╚════════════════════════════════════════════════╝');
 
   try {

@@ -9,7 +9,7 @@ import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../components/common';
 import { DynamicFormRenderer } from '../components/forms';
 import SignaturePad from '../components/common/SignaturePad';
-import { STATUS_CONFIG, REQUEST_TYPE_LABELS, FORM_TYPE_LABELS } from '../utils/constants';
+import { STATUS_CONFIG, REQUEST_TYPE_LABELS, FORM_TYPE_LABELS, FORMS_REQUIRING_ATTACHMENTS } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
 import { uploadRequestFiles, getFileUrl } from '../firebase/storage';
 import { generateRequestPdf } from '../services/pdfService';
@@ -66,9 +66,12 @@ export default function HDRequestsPage() {
     updateRequestDocUrls, updateDraftRequest,
     formTemplates, formSubmissions,
     createFormSubmission, updateFormSubmissionData,
+    updateFormSubmissionAttachments,
     completeFormSection, referBackFormSection,
     updateFormSubmissionStatus, linkFormSubmission,
     getFormSubmissionsForRequest,
+    getFormTemplateBySlug,
+    exportToCSV, downloadCSV,
   } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -101,7 +104,11 @@ export default function HDRequestsPage() {
   const [formSectionStatuses, setFormSectionStatuses] = useState({});
   const [formSignatures, setFormSignatures] = useState({});
   const [formValidationErrors, setFormValidationErrors] = useState({});
+  const [showFormPreview, setShowFormPreview] = useState(false);
+  const [previewFormTemplate, setPreviewFormTemplate] = useState(null);
+  const [previewFormData, setPreviewFormData] = useState({});
   const [formFullscreen, setFormFullscreen] = useState(false);
+  const [formRequiredAttachments, setFormRequiredAttachments] = useState({});
 
   /* ── UserPicker state (for supervisor/coordinator selection) ── */
   const [showSupervisorPicker, setShowSupervisorPicker] = useState(false);
@@ -157,7 +164,7 @@ export default function HDRequestsPage() {
   /* ── ACTION HANDLERS ── */
   const handleSubmitToSupervisor = async () => {
     await submitToSupervisor(selectedRequest.id, user.id);
-    showToast('Request submitted to supervisor. Access code generated.');
+    showToast('Request submitted. Access code generated.');
     // Email: notify supervisor
     const supervisor = getUserById(selectedRequest.supervisorId);
     if (supervisor) {
@@ -167,7 +174,7 @@ export default function HDRequestsPage() {
 
   const handleResubmit = async () => {
     await resubmitRequest(selectedRequest.id, user.id);
-    showToast('Request resubmitted to supervisor.');
+    showToast('Request resubmitted.');
     const supervisor = getUserById(selectedRequest.supervisorId);
     if (supervisor) {
       sendRequestSubmittedEmail(supervisor.email, supervisor.name, selectedRequest.title, user.name).catch(() => {});
@@ -295,8 +302,8 @@ export default function HDRequestsPage() {
         const freshReq = mockHDRequests.find(r => r.id === selectedRequest.id) || selectedRequest;
         const pdfBlob = await generateRequestPdf(freshReq, { getUserById, studentProfile });
         const pdfPath = `requests/${selectedRequest.id}/final_approved.pdf`;
-        const pdfUrl = await uploadPdfBlob(pdfBlob, pdfPath);
-        await updateRequestDocUrls(selectedRequest.id, { finalPdfUrl: pdfUrl });
+        const uploaded = await uploadPdfBlob(pdfBlob, pdfPath);
+        await updateRequestDocUrls(selectedRequest.id, { finalPdfUrl: uploaded.url, finalPdfPath: uploaded.path });
         showToast('Request fully approved — PDF generated.');
       } catch (err) {
         console.error('PDF generation error:', err);
@@ -319,7 +326,8 @@ export default function HDRequestsPage() {
       if (url.startsWith('http')) {
         window.open(url, '_blank');
       } else {
-        const downloadUrl = await getFileUrl(url);
+        const storagePath = url.startsWith('/') ? url.slice(1) : url;
+        const downloadUrl = await getFileUrl(storagePath);
         window.open(downloadUrl, '_blank');
       }
     } catch (err) {
@@ -397,6 +405,27 @@ export default function HDRequestsPage() {
             >
               <HiOutlineExclamationTriangle style={{ verticalAlign: -2, marginRight: 4 }} />
               Overdue Only
+            </button>
+          )}
+          {/* Export CSV for staff roles */}
+          {['supervisor', 'coordinator', 'admin'].includes(user.role) && filtered.length > 0 && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                const csv = exportToCSV(filtered, [
+                  { label: 'Title', accessor: 'title' },
+                  { label: 'Type', accessor: r => REQUEST_TYPE_LABELS[r.type] || r.type },
+                  { label: 'Student', accessor: 'studentName' },
+                  { label: 'Status', accessor: r => STATUS_CONFIG[r.status]?.label || r.status },
+                  { label: 'Owner', accessor: r => getUserById(r.currentOwner)?.name || '—' },
+                  { label: 'Created', accessor: r => r.createdAt instanceof Date ? r.createdAt.toISOString().slice(0, 10) : '' },
+                  { label: 'Updated', accessor: r => r.updatedAt instanceof Date ? r.updatedAt.toISOString().slice(0, 10) : '' },
+                ]);
+                downloadCSV(csv, `hd-requests-${new Date().toISOString().slice(0, 10)}.csv`);
+                showToast('CSV exported');
+              }}
+            >
+              <HiOutlineArrowUpTray style={{ verticalAlign: -2, marginRight: 4 }} /> Export CSV
             </button>
           )}
         </div>
@@ -578,19 +607,30 @@ export default function HDRequestsPage() {
               </div>
             )}
 
-            {/* Review Documents & Version Control button */}
-            <div className="request-detail-section" style={{ marginTop: 'var(--space-lg)' }}>
-              <button
-                className="btn btn-primary"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                onClick={() => { setSelectedRequest(null); navigate(`/requests/${selectedRequest.id}/review`); }}
-              >
-                <HiOutlineClipboardDocumentList /> Review Documents & Version History
-              </button>
-            </div>
+            {/* View Form Preview button — show for any request with a linked form submission OR a matching template */}
+            {(() => {
+              const linkedSubs = getFormSubmissionsForRequest(selectedRequest.id);
+              const linkedSub = linkedSubs?.[0];
+              const template = linkedSub
+                ? (formTemplates.find(t => t.id === linkedSub.templateId) || ALL_PREBUILT_TEMPLATES.find(t => t.slug === selectedRequest.type))
+                : ALL_PREBUILT_TEMPLATES.find(t => t.slug === selectedRequest.type);
+              if (!template) return null;
+              return (
+                <div className="request-detail-section" style={{ marginTop: 'var(--space-lg)' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    onClick={() => { setPreviewFormTemplate(template); setPreviewFormData(linkedSub?.data || {}); setShowFormPreview(true); }}
+                  >
+                    <HiOutlineClipboardDocumentList /> {linkedSub ? 'View Submitted Form' : 'View Form Template'}
+                  </button>
+                </div>
+              );
+            })()}
 
-            {/* Supervisor/Coordinator review file upload */}
-            {((user.role === 'supervisor' && ['supervisor_review'].includes(selectedRequest.status))
+            {/* Supervisor/Coordinator review file upload - only for form types requiring attachments */}
+            {FORMS_REQUIRING_ATTACHMENTS.includes(selectedRequest.type) &&
+              ((user.role === 'supervisor' && ['supervisor_review'].includes(selectedRequest.status))
               || (user.role === 'coordinator' && selectedRequest.status === 'coordinator_review')) && (
               <div className="request-detail-section" style={{ marginTop: 'var(--space-xl)' }}>
                 <div className="request-detail-label">Attach Review Documents</div>
@@ -784,6 +824,23 @@ export default function HDRequestsPage() {
         </div>
       </Modal>
 
+      {/* ── Form Preview Modal (read-only view of submitted form) ── */}
+      <Modal
+        isOpen={showFormPreview && !!previewFormTemplate}
+        onClose={() => { setShowFormPreview(false); setPreviewFormTemplate(null); setPreviewFormData({}); }}
+        title="Submitted Form Preview"
+        large
+      >
+        {previewFormTemplate && (
+          <DynamicFormRenderer
+            template={previewFormTemplate}
+            formData={previewFormData}
+            readOnly
+            bypassRoleLocking
+          />
+        )}
+      </Modal>
+
       {/* ── New Request Modal – Template Selection ── */}
       <TemplateSelectionModal
         isOpen={showNewRequestModal}
@@ -797,6 +854,7 @@ export default function HDRequestsPage() {
           setFormSectionStatuses({});
           setFormSignatures({});
           setFormValidationErrors({});
+          setFormRequiredAttachments({});
           setShowNewRequestModal(false);
           // Pre-populate auto fields will happen in DynamicFormRenderer
         }}
@@ -805,7 +863,7 @@ export default function HDRequestsPage() {
       {/* ── Form Fill Modal ── */}
       <Modal
         isOpen={!!activeFormTemplate}
-        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setFormFullscreen(false); setSelectedSupervisor(null); setSelectedCoordinator(null); }}
+        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setFormFullscreen(false); setSelectedSupervisor(null); setSelectedCoordinator(null); setFormRequiredAttachments({}); }}
         title={activeFormTemplate?.layout?.header?.formTitle || activeFormTemplate?.name || 'Form'}
         large
         fullscreen={formFullscreen}
@@ -813,46 +871,53 @@ export default function HDRequestsPage() {
       >
         {activeFormTemplate && (
           <>
-            {/* ── Supervisor / Coordinator Assignment Bar ── */}
-            <div style={{
-              display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)',
-              padding: 'var(--space-md)', borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-muted)', border: '1px solid var(--border-color)',
-              flexWrap: 'wrap',
-            }}>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Supervisor</div>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', justifyContent: 'flex-start', gap: 6 }}
-                  onClick={() => setShowSupervisorPicker(true)}
-                >
-                  {selectedSupervisor ? (
-                    <><HiOutlineCheckCircle style={{ color: 'var(--status-success)' }} /> {selectedSupervisor.name}</>
-                  ) : (
-                    getStudentProfile(user.id)?.supervisorId ? (
-                      <>{getUserById(getStudentProfile(user.id)?.supervisorId)?.name || 'Assigned Supervisor'}</>
-                    ) : (
-                      <><HiOutlinePlusCircle /> Select Supervisor</>
-                    )
+            {/* ── Auto-prefilled Supervisor / Coordinator Info ── */}
+            {(() => {
+              const prof = getStudentProfile(user.id);
+              const supId = prof?.supervisorId;
+              const coordId = mockUsers.find(u => u.role === 'coordinator')?.id;
+              const sup = supId ? getUserById(supId) : null;
+              const coord = coordId ? getUserById(coordId) : null;
+              return (
+                <div style={{
+                  display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)',
+                  padding: 'var(--space-md)', borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-muted)', border: '1px solid var(--border-color)',
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Supervisor</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: sup ? 'var(--text-primary)' : 'var(--status-danger)' }}>
+                      {sup ? (<><HiOutlineCheckCircle style={{ color: 'var(--status-success)', verticalAlign: -2, marginRight: 4 }} />{sup.name}</>) : 'Not assigned — update your profile'}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coordinator</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {coord ? (<><HiOutlineCheckCircle style={{ color: 'var(--status-success)', verticalAlign: -2, marginRight: 4 }} />{coord.name}</>) : 'Auto-assigned'}
+                    </div>
+                  </div>
+                  {!sup && (
+                    <div style={{ width: '100%', marginTop: 4 }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => navigate('/settings')}>Go to Profile to assign supervisor</button>
+                    </div>
                   )}
-                </button>
-              </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coordinator</div>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', justifyContent: 'flex-start', gap: 6 }}
-                  onClick={() => setShowCoordinatorPicker(true)}
-                >
-                  {selectedCoordinator ? (
-                    <><HiOutlineCheckCircle style={{ color: 'var(--status-success)' }} /> {selectedCoordinator.name}</>
-                  ) : (
-                    <>{mockUsers.find(u => u.role === 'coordinator')?.name || 'Auto-assigned'}</>
-                  )}
-                </button>
-              </div>
-            </div>
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const requiredAttachments = (activeFormTemplate.requiredAttachments || []).filter(a => a.required);
+              if (requiredAttachments.length === 0) return null;
+
+              return (
+                <RequiredAttachmentFields
+                  requiredAttachments={requiredAttachments}
+                  filesByKey={formRequiredAttachments}
+                  onChange={setFormRequiredAttachments}
+                />
+              );
+            })()}
 
             <DynamicFormRenderer
             template={activeFormTemplate}
@@ -890,14 +955,26 @@ export default function HDRequestsPage() {
             }}
             onSubmit={async () => {
               try {
-                // Resolve supervisor and coordinator
+                // Resolve supervisor and coordinator from profile (auto-prefilled)
                 const profile = getStudentProfile(user.id);
-                const supervisorId = selectedSupervisor?.id || profile?.supervisorId;
-                const coordinatorId = selectedCoordinator?.id || mockUsers.find(u => u.role === 'coordinator')?.id;
+                const supervisorId = profile?.supervisorId;
+                const coordinatorId = mockUsers.find(u => u.role === 'coordinator')?.id;
+                const requiredAttachments = (activeFormTemplate.requiredAttachments || []).filter(a => a.required);
+                const missingRequired = requiredAttachments.filter((attachment, index) => {
+                  const key = attachment.id || attachment.key || attachment.label || `required_${index}`;
+                  return !formRequiredAttachments[key];
+                });
+
+                if (missingRequired.length > 0) {
+                  showToast(
+                    `Please attach required document(s): ${missingRequired.map((d) => d.label).join(', ')}`,
+                    'error'
+                  );
+                  return;
+                }
 
                 if (!supervisorId) {
-                  showToast('Please select a supervisor before submitting.', 'error');
-                  setShowSupervisorPicker(true);
+                  showToast('Please assign a supervisor in your profile Settings before submitting.', 'error');
                   return;
                 }
 
@@ -929,8 +1006,30 @@ export default function HDRequestsPage() {
                   studentName: user.name,
                   supervisorId: supervisorId,
                   coordinatorId: coordinatorId || 'coordinator-001',
+                  studentDepartment: profile?.department,
+                  studentFaculty: profile?.faculty,
+                  studentProgramme: profile?.programme,
                   formSubmissionId: submissionId,
                 });
+
+                if (requiredAttachments.length > 0) {
+                  const attachmentPairs = requiredAttachments.map((attachment, index) => {
+                    const key = attachment.id || attachment.key || attachment.label || `required_${index}`;
+                    return { key, label: attachment.label, file: formRequiredAttachments[key] };
+                  }).filter((entry) => !!entry.file);
+
+                  const uploaded = await uploadRequestFiles(attachmentPairs.map((entry) => entry.file), req.id, 'submission');
+                  const labeledUploads = uploaded.map((fileMeta, index) => ({
+                    ...fileMeta,
+                    requiredField: attachmentPairs[index].key,
+                    requiredLabel: attachmentPairs[index].label,
+                  }));
+
+                  await updateRequestDocUrls(req.id, { documents: labeledUploads });
+                  await updateFormSubmissionAttachments(submissionId, {
+                    requiredDocuments: labeledUploads,
+                  });
+                }
 
                 // Link submission to request
                 await linkFormSubmission(submissionId, req.id);
@@ -946,6 +1045,7 @@ export default function HDRequestsPage() {
                 setActiveFormSubmission(null);
                 setSelectedSupervisor(null);
                 setSelectedCoordinator(null);
+                setFormRequiredAttachments({});
               } catch (err) {
                 console.error('Form submission error:', err);
                 showToast('Failed to submit form', 'error');
@@ -957,29 +1057,7 @@ export default function HDRequestsPage() {
         )}
       </Modal>
 
-      {/* ── Supervisor Picker ── */}
-      <UserPicker
-        isOpen={showSupervisorPicker}
-        onClose={() => setShowSupervisorPicker(false)}
-        onSelect={(u) => { setSelectedSupervisor(u); setShowSupervisorPicker(false); }}
-        users={mockUsers}
-        title="Select Supervisor"
-        roleFilter={['supervisor']}
-        excludeIds={[user.id]}
-        selectedId={selectedSupervisor?.id}
-      />
-
-      {/* ── Coordinator Picker ── */}
-      <UserPicker
-        isOpen={showCoordinatorPicker}
-        onClose={() => setShowCoordinatorPicker(false)}
-        onSelect={(u) => { setSelectedCoordinator(u); setShowCoordinatorPicker(false); }}
-        users={mockUsers}
-        title="Select Coordinator"
-        roleFilter={['coordinator', 'admin']}
-        excludeIds={[user.id]}
-        selectedId={selectedCoordinator?.id}
-      />
+      {/* Supervisor/Coordinator are now auto-prefilled from profile – no picker modals needed */}
     </div>
   );
 }
@@ -1007,7 +1085,7 @@ function RequestModalActions({ request, userRole, userId, onClose, onSubmit, onR
           <HiOutlinePencilSquare /> Edit
         </button>
         <button className="btn btn-primary" onClick={onSubmit}>
-          <HiOutlinePaperAirplane /> Submit to Supervisor
+          <HiOutlinePaperAirplane /> Submit
         </button>
       </>
     );
@@ -1121,6 +1199,71 @@ function FileUploadZone({ files, onChange, hint, accept }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function RequiredAttachmentFields({ requiredAttachments, filesByKey, onChange }) {
+  const setFileForKey = (key, fileList) => {
+    const [selected] = Array.from(fileList || []);
+    onChange((prev) => ({ ...prev, [key]: selected || null }));
+  };
+
+  const clearFileForKey = (key) => {
+    onChange((prev) => ({ ...prev, [key]: null }));
+  };
+
+  return (
+    <div style={{
+      marginBottom: 'var(--space-lg)',
+      padding: 'var(--space-md)',
+      borderRadius: 'var(--radius-md)',
+      border: '1px solid var(--border-color)',
+      background: 'var(--bg-muted)',
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+        Required Attachments
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>
+        Each required document has a designated upload field.
+      </div>
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {requiredAttachments.map((attachment, index) => {
+          const key = attachment.id || attachment.key || attachment.label || `required_${index}`;
+          const selectedFile = filesByKey[key];
+          const accept = Array.isArray(attachment.fileTypes) ? attachment.fileTypes.join(',') : undefined;
+
+          return (
+            <div key={key} className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">
+                {attachment.label} <span style={{ color: 'var(--status-danger)' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                  <HiOutlineArrowUpTray /> Upload
+                  <input
+                    type="file"
+                    accept={accept}
+                    style={{ display: 'none' }}
+                    onChange={(e) => setFileForKey(key, e.target.files)}
+                  />
+                </label>
+                {selectedFile ? (
+                  <>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{selectedFile.name}</span>
+                    <button className="btn btn-ghost btn-sm" onClick={() => clearFileForKey(key)} title="Remove file">
+                      <HiOutlineTrash />
+                    </button>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No file selected</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
