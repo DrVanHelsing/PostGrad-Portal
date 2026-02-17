@@ -101,6 +101,31 @@ function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizeDocName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\-_]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function toDocBase(value) {
+  return normalizeDocName(value).replace(/\.[a-z0-9]+$/i, '');
+}
+
+function isDocumentMatch(annotationName, targetName) {
+  if (!targetName) return false;
+  if (!annotationName) return false;
+  const ann = normalizeDocName(annotationName);
+  const tgt = normalizeDocName(targetName);
+  if (!ann || !tgt) return false;
+  const annBase = toDocBase(annotationName);
+  const tgtBase = toDocBase(targetName);
+  if (!annBase || !tgtBase) return false;
+
+  return ann === tgt || annBase === tgtBase || ann.includes(tgtBase) || tgt.includes(annBase);
+}
+
 /* ══════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════ */
@@ -238,7 +263,7 @@ export default function SubmissionsPage() {
       {/* ── Search & Filters Bar ── */}
       <div className="sub-toolbar">
         <div className="sub-toolbar-left">
-          <div className="search-container" style={{ maxWidth: 280 }}>
+          <div className="search-container sub-search-container">
             <HiOutlineMagnifyingGlass className="search-icon" />
             <input className="search-input" placeholder="Search submissions..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
@@ -288,14 +313,35 @@ export default function SubmissionsPage() {
           <CardBody flush>
             <div className="table-wrapper">
               <table className="data-table sub-table">
+                <colgroup>
+                  {user?.role !== 'student' ? (
+                    <>
+                      <col style={{ width: '32%' }} />
+                      <col style={{ width: '13%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '13%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '12%' }} />
+                      <col style={{ width: '10%' }} />
+                    </>
+                  ) : (
+                    <>
+                      <col style={{ width: '35%' }} />
+                      <col style={{ width: '14%' }} />
+                      <col style={{ width: '14%' }} />
+                      <col style={{ width: '9%' }} />
+                      <col style={{ width: '14%' }} />
+                      <col style={{ width: '14%' }} />
+                    </>
+                  )}
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Document</th>
                     <th>Type</th>
                     {user?.role !== 'student' && <th>Student</th>}
                     <th>Status</th>
-                    <th>Version</th>
-                    <th>Rating</th>
+                    <th className="sub-col-version">Version</th>
                     <th>Updated</th>
                     <th></th>
                   </tr>
@@ -304,7 +350,6 @@ export default function SubmissionsPage() {
                   {mySubmissions.map(sub => {
                     const typeCfg = SUBMISSION_TYPES[sub.submissionType] || SUBMISSION_TYPES.draft_chapter;
                     const statusCfg = SUBMISSION_STATUS[sub.status] || SUBMISSION_STATUS.submitted;
-                    const avgRating = Number(sub.rating?.overall);
                     return (
                       <tr key={sub.id} className="sub-table-row" onClick={() => openDetail(sub.id)}>
                         <td>
@@ -321,12 +366,7 @@ export default function SubmissionsPage() {
                         </td>
                         {user?.role !== 'student' && <td className="sub-table-meta">{sub.studentName}</td>}
                         <td><StatusBadge status={sub.status} config={statusCfg} /></td>
-                        <td className="sub-table-meta">v{sub.currentVersion || 1}</td>
-                        <td>
-                          {Number.isFinite(avgRating) ? (
-                            <span className="sub-table-rating"><HiOutlineStar style={{ fill: 'currentColor', color: 'var(--status-warning)' }} /> {avgRating.toFixed(1)}</span>
-                          ) : <span className="sub-table-meta">—</span>}
-                        </td>
+                        <td className="sub-table-meta sub-col-version">v{sub.currentVersion || 1}</td>
                         <td className="sub-table-meta">{fmtDate(sub.updatedAt)}</td>
                         <td>
                           <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); openDetail(sub.id); }}>
@@ -366,7 +406,29 @@ function DetailView({ submission: sub, user, updateThesisSubmission, addNotifica
     });
   }, [versions]);
 
-  const annotations = useMemo(() => toArray(sub?.annotations).filter(a => activeVersion ? a.versionId === activeVersion.id : true), [sub?.annotations, activeVersion]);
+  const annotations = useMemo(() => {
+    const embedded = toArray(sub?.annotations).filter(a => activeVersion ? a.versionId === activeVersion.id : true);
+    // Enrich embedded annotations that lack documentName:
+    // If the annotation's version matches the active version, assign the first document's name
+    const versionDocs = activeVersion ? toArray(activeVersion.documents) : [];
+    return embedded.map(ann => {
+      if (ann.documentName || ann.docName || ann.document || ann.fileName) return ann;
+      // Embedded annotations without documentName → assign from version's documents
+      const firstDoc = versionDocs[0];
+      return firstDoc ? { ...ann, documentName: firstDoc.name } : ann;
+    });
+  }, [sub?.annotations, activeVersion]);
+
+  const annotationCountByDocument = useMemo(() => {
+    const map = new Map();
+    annotations.forEach((ann) => {
+      const docName = ann?.documentName || ann?.docName || ann?.document || ann?.fileName || '';
+      const key = toDocBase(docName);
+      if (!key) return;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return map;
+  }, [annotations]);
 
   const handleOpenDocument = useCallback(async (docItem) => {
     try {
@@ -534,6 +596,18 @@ function DetailView({ submission: sub, user, updateThesisSubmission, addNotifica
                         <div className="sub-doc-name">{doc.name}</div>
                         <div className="sub-doc-size">{doc.size}</div>
                       </div>
+                      {(() => {
+                        const base = toDocBase(doc?.name || '');
+                        const directCount = annotationCountByDocument.get(base) || 0;
+                        const fallbackCount = directCount > 0
+                          ? directCount
+                          : annotations.filter(a => isDocumentMatch(a?.documentName || a?.docName || a?.document || a?.fileName, doc?.name)).length;
+                        return fallbackCount > 0 ? (
+                          <span className="sub-doc-annotation-badge" title={`${fallbackCount} annotation${fallbackCount === 1 ? '' : 's'}`}>
+                            <HiOutlineClipboardDocumentList /> {fallbackCount}
+                          </span>
+                        ) : null;
+                      })()}
                       <HiOutlineEye style={{ color: 'var(--text-tertiary)', fontSize: 16 }} />
                     </div>
                   ))}
@@ -574,29 +648,6 @@ function DetailView({ submission: sub, user, updateThesisSubmission, addNotifica
                     {fb.comments && <p className="sub-feedback-comments">{fb.comments}</p>}
                   </div>
                 ))}
-              </CardBody>
-            </Card>
-          )}
-
-          {/* Annotations */}
-          {annotations.length > 0 && (
-            <Card>
-              <CardHeader title={`Annotations (${annotations.length})`} icon={<HiOutlineClipboardDocumentList />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)" />
-              <CardBody>
-                <div className="sub-annotation-list">
-                  {annotations.map(ann => (
-                    <div key={ann.id} className={`sub-annotation-item ${ann.status === 'resolved' ? 'resolved' : ''}`}>
-                      <span className="sub-annotation-page">p.{ann.page}</span>
-                      <div className="sub-annotation-body">
-                        <span className="sub-annotation-text">"{ann.selectedText}"</span>
-                        <span className="sub-annotation-comment">{ann.comment}</span>
-                        <div className="sub-annotation-meta">
-                          {ann.authorName} · {fmtDate(ann.createdAt)} {ann.status === 'resolved' && <span className="sub-annotation-resolved">✓ Resolved</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </CardBody>
             </Card>
           )}

@@ -54,6 +54,41 @@ const ROLE_COLORS = {
 /* Color name → hex mapping (for embedded annotation seed data) */
 const EMBED_COLOR_MAP = { yellow: '#ffd43b', green: '#69db7c', blue: '#74c0fc', red: '#ffa8a8', pink: '#ffc9c9', orange: '#ffa94d' };
 
+function normalizeDocName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\-_]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function toDocBase(value) {
+  return normalizeDocName(value).replace(/\.[a-z0-9]+$/i, '');
+}
+
+function isDocumentMatch(annotationName, targetName) {
+  if (!targetName) return true;
+  if (!annotationName) return true;  // No documentName → include (match all)
+  const ann = normalizeDocName(annotationName);
+  const tgt = normalizeDocName(targetName);
+  if (!ann) return true;
+  if (!tgt) return true;
+  const annBase = toDocBase(annotationName);
+  const tgtBase = toDocBase(targetName);
+
+  return ann === tgt || annBase === tgtBase || (annBase && tgtBase && (ann.includes(tgtBase) || tgt.includes(annBase)));
+}
+
+function prefersVersionMatch(annotation, versionId) {
+  if (!versionId) return true;
+  if (!annotation?.versionId) return true;
+  return annotation.versionId === versionId;
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 /* ══════════════════════════════════════════
    MAIN COMPONENT: AnnotatedDocViewer
    ══════════════════════════════════════════ */
@@ -109,6 +144,7 @@ export default function AnnotatedDocViewer({
   // Batch confirm/send state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const requestFallbackTriedRef = useRef(false);
 
   const viewerRef = useRef(null);
   const pdfContainerRef = useRef(null);
@@ -192,10 +228,38 @@ export default function AnnotatedDocViewer({
       console.warn('[Annotations] Subscription skipped — missing:', { versionId, docName: doc.name });
       return;
     }
+    requestFallbackTriedRef.current = false;
     console.warn('[Annotations] Subscribing →', { versionId, docName: doc.name });
     setAnnotationsError(null);
     let unsub;
     let receivedSnapshot = false;
+    let cancelled = false;
+
+    const tryRequestIdFallback = async () => {
+      if (requestFallbackTriedRef.current || !requestId || !doc.name || cancelled) return;
+      requestFallbackTriedRef.current = true;
+      try {
+        const { collection: fbCollection, query: fbQuery, where: fbWhere, getDocs: fbGetDocs } = await import('firebase/firestore');
+        const { db: fbDb } = await import('../firebase/config');
+        const rq = fbQuery(
+          fbCollection(fbDb, 'annotations'),
+          fbWhere('requestId', '==', requestId)
+        );
+        const reqSnap = await fbGetDocs(rq);
+        const reqMatches = reqSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(a => isDocumentMatch(a.documentName, doc.name))
+          .filter(a => prefersVersionMatch(a, versionId));
+
+        console.warn('[Annotations] requestId fallback →', reqMatches.length, 'annotations');
+        if (!cancelled && reqMatches.length > 0) {
+          setFirestoreAnnotations(reqMatches);
+        }
+      } catch (fallbackErr) {
+        console.error('[Annotations] requestId fallback failed →', fallbackErr);
+      }
+    };
+
     try {
       unsub = subscribeToAnnotations(
         versionId,
@@ -204,6 +268,9 @@ export default function AnnotatedDocViewer({
           receivedSnapshot = true;
           console.warn('[Annotations] Firestore snapshot →', anns.length, 'annotations');
           setFirestoreAnnotations(anns);
+          if (anns.length === 0) {
+            void tryRequestIdFallback();
+          }
         },
         (err) => {
           receivedSnapshot = true;
@@ -225,25 +292,30 @@ export default function AnnotatedDocViewer({
         const { db: fbDb } = await import('../firebase/config');
         const q = fbQuery(
           fbCollection(fbDb, 'annotations'),
-          fbWhere('versionId', '==', versionId),
-          fbWhere('documentName', '==', doc.name)
+          fbWhere('versionId', '==', versionId)
         );
         const snap = await fbGetDocs(q);
-        const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const results = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(a => isDocumentMatch(a.documentName, doc.name));
         console.warn('[Annotations] getDocs fallback →', results.length, 'annotations');
         if (results.length > 0) {
           setFirestoreAnnotations(results);
+        } else {
+          await tryRequestIdFallback();
         }
       } catch (fbErr) {
         console.error('[Annotations] getDocs fallback failed →', fbErr);
+        await tryRequestIdFallback();
       }
     }, 3000);
 
     return () => {
+      cancelled = true;
       clearTimeout(fallbackTimer);
       if (unsub) unsub();
     };
-  }, [versionId, doc.name]);
+  }, [versionId, doc.name, requestId]);
 
   /* ── Merge Firestore annotations with embedded annotations from the submission ── */
   const annotations = useMemo(() => {
@@ -256,19 +328,32 @@ export default function AnnotatedDocViewer({
     if (requestId && getThesisSubmissionById) {
       const sub = getThesisSubmissionById(requestId);
       if (sub?.annotations && Array.isArray(sub.annotations)) {
+        // Build a lookup: versionId → first document name for enriching embedded annotations
+        const versionDocNameMap = {};
+        toArray(sub.versions).forEach(v => {
+          const docs = toArray(v.documents);
+          if (docs.length > 0) {
+            versionDocNameMap[v.id] = docs[0].name;
+          }
+        });
+
         for (const raw of sub.annotations) {
           // Only include annotations for the current versionId
           if (versionId && raw.versionId && raw.versionId !== versionId) continue;
           embeddedFound++;
           // Skip if we already have this from Firestore (Firestore wins)
           if (merged.has(raw.id)) continue;
+
+          // Determine document name: use explicit field, else lookup from version, else current doc
+          const resolvedDocName = raw.documentName || raw.docName || versionDocNameMap[raw.versionId] || doc.name;
+
           // Map field names:  page → pageNumber,  color → highlightColor
           merged.set(raw.id, {
             ...raw,
             pageNumber: raw.pageNumber || raw.page || 1,
             highlightColor: raw.highlightColor || (raw.color?.startsWith('#') ? raw.color : EMBED_COLOR_MAP[raw.color] || '#ffd43b'),
             resolved: raw.resolved ?? (raw.status === 'resolved'),
-            documentName: raw.documentName || doc.name,
+            documentName: resolvedDocName,
             requestId: raw.requestId || requestId,
             replies: raw.replies || [],
           });

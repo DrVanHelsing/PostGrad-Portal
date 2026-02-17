@@ -31,17 +31,42 @@ function convertTimestamps(obj) {
   return result;
 }
 
+function normalizeDocName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\-_]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function toDocBase(value) {
+  return normalizeDocName(value).replace(/\.[a-z0-9]+$/i, '');
+}
+
+function isDocumentMatch(annotationName, targetName) {
+  if (!targetName) return true;
+  if (!annotationName) return true;  // No documentName on annotation → include it
+  const ann = normalizeDocName(annotationName);
+  const tgt = normalizeDocName(targetName);
+  if (!ann) return true;  // Empty after normalize → include
+  if (!tgt) return true;
+  const annBase = toDocBase(annotationName);
+  const tgtBase = toDocBase(targetName);
+
+  return ann === tgt || annBase === tgtBase || (annBase && tgtBase && (ann.includes(tgtBase) || tgt.includes(annBase)));
+}
+
 /* ── Subscribe to annotations for a specific version + document ── */
 export function subscribeToAnnotations(versionId, documentName, callback, onError) {
   const ref = collection(db, COLLECTIONS.ANNOTATIONS);
   const q = query(
     ref,
-    where('versionId', '==', versionId),
-    where('documentName', '==', documentName)
+    where('versionId', '==', versionId)
   );
   return onSnapshot(q, (snapshot) => {
     const annotations = snapshot.docs
       .map(d => convertTimestamps({ id: d.id, ...d.data() }))
+      .filter(a => isDocumentMatch(a.documentName, documentName))
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     callback(annotations);
   }, (error) => {

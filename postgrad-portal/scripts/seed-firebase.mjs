@@ -483,9 +483,9 @@ const SEED_THESIS_SUBMISSIONS = [
       },
     ],
     annotations: [
-      { id: 'ann-001', versionId: 'tv-001', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 5, selectedText: 'convenience sampling approach', comment: 'This needs to be changed to stratified sampling to ensure representativeness across hospital types.', color: 'yellow', status: 'resolved', createdAt: ts('2026-01-25') },
-      { id: 'ann-002', versionId: 'tv-001', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 8, selectedText: 'ethical approval is pending', comment: 'Update this to reflect the approved ethics number (HS-2025-0847).', color: 'green', status: 'resolved', createdAt: ts('2026-01-25') },
-      { id: 'ann-003', versionId: 'tv-002', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'deep learning architectures', comment: 'Consider citing the recent survey by Chen et al. (2025) here.', color: 'blue', status: 'active', createdAt: ts('2026-02-03') },
+      { id: 'ann-001', versionId: 'tv-001', documentName: 'Chapter3_Methodology_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 5, selectedText: 'convenience sampling approach', comment: 'This needs to be changed to stratified sampling to ensure representativeness across hospital types.', color: 'yellow', status: 'resolved', createdAt: ts('2026-01-25') },
+      { id: 'ann-002', versionId: 'tv-001', documentName: 'Chapter3_Methodology_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 8, selectedText: 'ethical approval is pending', comment: 'Update this to reflect the approved ethics number (HS-2025-0847).', color: 'green', status: 'resolved', createdAt: ts('2026-01-25') },
+      { id: 'ann-003', versionId: 'tv-002', documentName: 'Chapter3_Methodology_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'deep learning architectures', comment: 'Consider citing the recent survey by Chen et al. (2025) here.', color: 'blue', status: 'active', createdAt: ts('2026-02-03') },
     ],
     rating: { overall: 3.5, criteria: { research_quality: 4, academic_writing: 3, methodology: 3, completeness: 3, formatting: 4 } },
   },
@@ -531,7 +531,10 @@ const SEED_THESIS_SUBMISSIONS = [
         ],
       },
     ],
-    annotations: [],
+    annotations: [
+      { id: 'ann-009', versionId: 'tv-003', documentName: 'Chapter2_LitReview_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'systematic review methodology', comment: 'Clarify whether you followed PRISMA or another systematic review framework.', color: 'yellow', status: 'resolved', createdAt: ts('2025-09-22') },
+      { id: 'ann-010', versionId: 'tv-004', documentName: 'Chapter2_LitReview_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 15, selectedText: 'limited African research context', comment: 'Good improvement — the new African case studies strengthen this section significantly.', color: 'green', status: 'resolved', createdAt: ts('2025-10-18') },
+    ],
     rating: { overall: 4.6, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 } },
   },
   {
@@ -567,8 +570,8 @@ const SEED_THESIS_SUBMISSIONS = [
       },
     ],
     annotations: [
-      { id: 'ann-004', versionId: 'tv-006', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 12, selectedText: 'urban growth prediction model', comment: 'Consider adding a comparison with the Cellular Automata approach used by Verburg et al.', color: 'yellow', status: 'active', createdAt: ts('2026-02-08') },
-      { id: 'ann-005', versionId: 'tv-006', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 45, selectedText: 'random forest regression', comment: 'The feature importance analysis should be presented as a separate table rather than inline text.', color: 'pink', status: 'active', createdAt: ts('2026-02-10') },
+      { id: 'ann-004', versionId: 'tv-006', documentName: 'Khumalo_MSc_Thesis_Full_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 12, selectedText: 'urban growth prediction model', comment: 'Consider adding a comparison with the Cellular Automata approach used by Verburg et al.', color: 'yellow', status: 'active', createdAt: ts('2026-02-08') },
+      { id: 'ann-005', versionId: 'tv-006', documentName: 'Khumalo_MSc_Thesis_Full_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 45, selectedText: 'random forest regression', comment: 'The feature importance analysis should be presented as a separate table rather than inline text.', color: 'pink', status: 'active', createdAt: ts('2026-02-10') },
     ],
     rating: null,
   },
@@ -606,7 +609,10 @@ const SEED_THESIS_SUBMISSIONS = [
         ],
       },
     ],
-    annotations: [],
+    annotations: [
+      { id: 'ann-011', versionId: 'tv-007', documentName: 'Chapter4_Results_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 7, selectedText: 'confidence interval of 95%', comment: 'Add confidence intervals to ALL prediction tables, not just Table 4.1.', color: 'yellow', status: 'resolved', createdAt: ts('2025-12-12') },
+      { id: 'ann-012', versionId: 'tv-007', documentName: 'Chapter4_Results_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 14, selectedText: 'discussion of findings', comment: 'Connect these findings back to the theoretical framework in Chapter 2.', color: 'pink', status: 'resolved', createdAt: ts('2025-12-13') },
+    ],
     rating: { overall: 4.8, criteria: { research_quality: 5, academic_writing: 5, methodology: 4, completeness: 5, formatting: 5 } },
   },
   // ── NEW: Varied submission types for broader submissions page ──
@@ -644,7 +650,11 @@ const SEED_THESIS_SUBMISSIONS = [
         ],
       },
     ],
-    annotations: [],
+    annotations: [
+      { id: 'ann-013', versionId: 'tv-009', documentName: 'Research_Proposal_Molefe_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 2, selectedText: 'broad scope of machine learning', comment: 'The scope is too broad. Narrow down to 2-3 specific diagnostic areas for feasibility.', color: 'yellow', status: 'resolved', createdAt: ts('2025-05-22') },
+      { id: 'ann-014', versionId: 'tv-009', documentName: 'Research_Proposal_Molefe_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 6, selectedText: 'budget allocation', comment: 'Budget section is incomplete. Please add estimated costs for data collection, computing resources, and travel.', color: 'red', status: 'resolved', createdAt: ts('2025-05-23') },
+      { id: 'ann-015', versionId: 'tv-010', documentName: 'Research_Proposal_Molefe_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 4, selectedText: 'tuberculosis and diabetic retinopathy', comment: 'Good focus areas. This is much more feasible now.', color: 'green', status: 'resolved', createdAt: ts('2025-06-18') },
+    ],
     rating: { overall: 4.4, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 4, formatting: 4 } },
   },
   {
@@ -708,7 +718,11 @@ const SEED_THESIS_SUBMISSIONS = [
         ],
       },
     ],
-    annotations: [],
+    annotations: [
+      { id: 'ann-016', versionId: 'tv-012', documentName: 'SLR_UrbanAnalytics_Khumalo_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 8, selectedText: 'search string construction', comment: 'Add the keyword co-occurrence analysis to validate your search strategy.', color: 'yellow', status: 'resolved', createdAt: ts('2025-08-18') },
+      { id: 'ann-017', versionId: 'tv-012', documentName: 'SLR_UrbanAnalytics_Khumalo_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 11, selectedText: 'no African case studies were found', comment: 'There are several African case studies — check Amoako (2022) and Odendaal (2021).', color: 'red', status: 'resolved', createdAt: ts('2025-08-19') },
+      { id: 'ann-018', versionId: 'tv-013', documentName: 'SLR_UrbanAnalytics_Khumalo_v2.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 5, selectedText: 'PRISMA flow diagram', comment: 'Much improved PRISMA diagram. Ready for thesis.', color: 'green', status: 'resolved', createdAt: ts('2025-09-18') },
+    ],
     rating: { overall: 4.6, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 } },
   },
   {
@@ -738,7 +752,7 @@ const SEED_THESIS_SUBMISSIONS = [
       },
     ],
     annotations: [
-      { id: 'ann-006', versionId: 'tv-014', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 2, selectedText: 'our novel approach', comment: 'Avoid using "novel" — let the reviewers decide if it\'s novel. Use "proposed" instead.', color: 'yellow', status: 'active', createdAt: ts('2026-02-10') },
+      { id: 'ann-006', versionId: 'tv-014', documentName: 'SAICSIT_2026_Khumalo_Draft.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 2, selectedText: 'our novel approach', comment: 'Avoid using "novel" — let the reviewers decide if it\'s novel. Use "proposed" instead.', color: 'yellow', status: 'active', createdAt: ts('2026-02-10') },
     ],
     rating: { overall: 3.4, criteria: { research_quality: 4, academic_writing: 3, methodology: 4, completeness: 3, formatting: 3 } },
   },
@@ -799,8 +813,8 @@ const SEED_THESIS_SUBMISSIONS = [
       },
     ],
     annotations: [
-      { id: 'ann-007', versionId: 'tv-016', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 4, selectedText: 'blockchain is a distributed ledger', comment: 'This paragraph reads like a tutorial. Cut it down — your readers will be academics familiar with the basics.', color: 'yellow', status: 'active', createdAt: ts('2025-12-15') },
-      { id: 'ann-008', versionId: 'tv-016', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 12, selectedText: 'no existing South African studies', comment: 'This is incorrect. See Ngwenya (2023) and van Zyl (2024) for SA-specific work in this area.', color: 'red', status: 'active', createdAt: ts('2025-12-15') },
+      { id: 'ann-007', versionId: 'tv-016', documentName: 'Chapter2_LitReview_Dlamini_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 4, selectedText: 'blockchain is a distributed ledger', comment: 'This paragraph reads like a tutorial. Cut it down — your readers will be academics familiar with the basics.', color: 'yellow', status: 'active', createdAt: ts('2025-12-15') },
+      { id: 'ann-008', versionId: 'tv-016', documentName: 'Chapter2_LitReview_Dlamini_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 12, selectedText: 'no existing South African studies', comment: 'This is incorrect. See Ngwenya (2023) and van Zyl (2024) for SA-specific work in this area.', color: 'red', status: 'active', createdAt: ts('2025-12-15') },
     ],
     rating: { overall: 3.0, criteria: { research_quality: 3, academic_writing: 3, methodology: 3, completeness: 3, formatting: 3 } },
   },
@@ -890,7 +904,10 @@ const SEED_THESIS_SUBMISSIONS = [
         ],
       },
     ],
-    annotations: [],
+    annotations: [
+      { id: 'ann-019', versionId: 'tv-019', documentName: 'Data_Analysis_Report_TB_Molefe.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'classification accuracy of 94.2%', comment: 'Impressive results. Please also report sensitivity and specificity for the TB class specifically.', color: 'blue', status: 'active', createdAt: ts('2026-02-12') },
+      { id: 'ann-020', versionId: 'tv-019', documentName: 'Statistical_Appendix_Molefe.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 1, selectedText: 'confusion matrix', comment: 'Label the axes more clearly — include class names not just numbers.', color: 'yellow', status: 'active', createdAt: ts('2026-02-12') },
+    ],
     rating: null,
   },
 ];
