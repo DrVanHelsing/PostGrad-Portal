@@ -255,3 +255,19 @@ export function sendEscalationEmail(recipientEmail, recipientName, formName, sec
     actionText: 'View Details',
   });
 }
+
+/** Reviewer left a comment / reply on a form field or section */
+export function sendAnnotationNotificationEmail(recipientEmail, recipientName, authorName, targetLabel, formName, isReply = false) {
+  return sendEmail({
+    toEmail: recipientEmail,
+    toName:  recipientName,
+    subject: `${isReply ? 'New reply' : 'New comment'} on "${formName}"`,
+    message:
+      `Dear ${recipientName},\n\n` +
+      `${authorName} has ${isReply ? 'replied to a comment on' : 'left a comment on'} the "${targetLabel}" field in "${formName}".\n\n` +
+      `Please log in to view the comment and respond if needed.\n\n` +
+      `Regards,\nPostGrad Portal`,
+    actionUrl:  `${window.location.origin}/requests`,
+    actionText: 'View Form Comments',
+  });
+}

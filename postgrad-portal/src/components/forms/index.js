@@ -8,3 +8,5 @@ export { default as KeywordsTagInput } from './KeywordsTagInput';
 export { default as WeightedTableField } from './WeightedTableField';
 export { default as RepeaterGroupField } from './RepeaterGroupField';
 export { default as LockedSectionOverlay } from './LockedSectionOverlay';
+export { default as FormAnnotationThread } from './FormAnnotationThread';
+export { default as FormAnnotationsPanel } from './FormAnnotationsPanel';

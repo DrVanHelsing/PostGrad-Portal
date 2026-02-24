@@ -63,6 +63,13 @@ import {
   exportToCSV,
   downloadCSV,
 } from '../firebase/firestore';
+import {
+  subscribeToFormAnnotations,
+  addFormAnnotation as fsAddFormAnnotation,
+  replyToFormAnnotation as fsReplyToFormAnnotation,
+  resolveFormAnnotation as fsResolveFormAnnotation,
+  reopenFormAnnotation as fsReopenFormAnnotation,
+} from '../firebase/formAnnotations';
 import { orderBy } from 'firebase/firestore';
 
 const DataContext = createContext(null);
@@ -534,6 +541,13 @@ export function DataProvider({ children }) {
     generateAccessCode,
     exportToCSV,
     downloadCSV,
+
+    // Form annotations (caller subscribes per-submission via subscribeToFormAnnotations)
+    subscribeToFormAnnotations,
+    addFormAnnotation: fsAddFormAnnotation,
+    replyToFormAnnotation: fsReplyToFormAnnotation,
+    resolveFormAnnotation: fsResolveFormAnnotation,
+    reopenFormAnnotation: fsReopenFormAnnotation,
   }), [
     loading, users, hdRequests, calendarEvents, milestones, notifications,
     studentProfiles, auditLogs, unreadCount,

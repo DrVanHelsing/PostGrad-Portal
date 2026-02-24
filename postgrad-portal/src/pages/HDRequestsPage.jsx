@@ -2,12 +2,12 @@
 // HD Requests Page – Fully Functional
 // ============================================
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../components/common';
-import { DynamicFormRenderer } from '../components/forms';
+import { DynamicFormRenderer, FormAnnotationsPanel } from '../components/forms';
 import SignaturePad from '../components/common/SignaturePad';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, FORM_TYPE_LABELS, FORMS_REQUIRING_ATTACHMENTS } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
@@ -18,6 +18,7 @@ import {
   sendRequestSubmittedEmail, sendRequestApprovedEmail, sendReferredBackEmail,
   sendFinalApprovalEmail, sendNudgeEmail, sendSectionHandoffEmail,
   sendSectionReferBackEmail, sendFormCompletionEmail, sendEscalationEmail,
+  sendAnnotationNotificationEmail,
 } from '../services/emailService';
 import UserPicker from '../components/common/UserPicker';
 import NotificationAlerts from '../components/common/NotificationAlerts';
@@ -40,6 +41,7 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlinePencilSquare,
   HiOutlineExclamationTriangle,
+  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2';
 import './HDRequestsPage.css';
 
@@ -72,6 +74,8 @@ export default function HDRequestsPage() {
     getFormSubmissionsForRequest,
     getFormTemplateBySlug,
     exportToCSV, downloadCSV,
+    subscribeToFormAnnotations,
+    addFormAnnotation, replyToFormAnnotation, resolveFormAnnotation, reopenFormAnnotation,
   } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -107,6 +111,10 @@ export default function HDRequestsPage() {
   const [showFormPreview, setShowFormPreview] = useState(false);
   const [previewFormTemplate, setPreviewFormTemplate] = useState(null);
   const [previewFormData, setPreviewFormData] = useState({});
+  const [previewFormSubmission, setPreviewFormSubmission] = useState(null);
+  const [previewAnnotations, setPreviewAnnotations] = useState([]);
+  const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
+  const annotationUnsubRef = useRef(null);
   const [formFullscreen, setFormFullscreen] = useState(false);
   const [formRequiredAttachments, setFormRequiredAttachments] = useState({});
 
@@ -126,6 +134,73 @@ export default function HDRequestsPage() {
     const interval = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  /* ── Form annotation subscription (live updates for the previewed submission) ── */
+  useEffect(() => {
+    if (showFormPreview && previewFormSubmission?.id) {
+      annotationUnsubRef.current?.();
+      annotationUnsubRef.current = subscribeToFormAnnotations(previewFormSubmission.id, setPreviewAnnotations);
+    } else {
+      annotationUnsubRef.current?.();
+      annotationUnsubRef.current = null;
+      setPreviewAnnotations([]);
+    }
+    return () => annotationUnsubRef.current?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFormPreview, previewFormSubmission?.id]);
+
+  /* ── Annotation permission helper ── */
+  const canAnnotate = ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(user.role);
+
+  /* ── Annotation handlers ── */
+  const handleAddAnnotation = useCallback(async (targetType, targetId, targetLabel, text) => {
+    if (!previewFormSubmission?.id) return;
+    try {
+      await addFormAnnotation({
+        submissionId: previewFormSubmission.id,
+        requestId: previewFormSubmission.requestId || previewFormSubmission.hdRequestId || '',
+        targetType, targetId, targetLabel,
+        authorId: user.id, authorName: user.name, authorRole: user.role,
+        text,
+      });
+    } catch (err) {
+      console.error('addFormAnnotation failed', err);
+      showToast('Failed to add comment', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addFormAnnotation, previewFormSubmission, user]);
+
+  const handleReplyAnnotation = useCallback(async (annotationId, text) => {
+    try {
+      await replyToFormAnnotation(annotationId, {
+        authorId: user.id, authorName: user.name, authorRole: user.role, text,
+      });
+    } catch (err) {
+      console.error('replyToFormAnnotation failed', err);
+      showToast('Failed to post reply', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replyToFormAnnotation, user]);
+
+  const handleResolveAnnotation = useCallback(async (annotationId) => {
+    try {
+      await resolveFormAnnotation(annotationId, user.id);
+    } catch (err) {
+      console.error('resolveFormAnnotation failed', err);
+      showToast('Failed to resolve comment', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolveFormAnnotation, user]);
+
+  const handleReopenAnnotation = useCallback(async (annotationId) => {
+    try {
+      await reopenFormAnnotation(annotationId);
+    } catch (err) {
+      console.error('reopenFormAnnotation failed', err);
+      showToast('Failed to reopen comment', 'error');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reopenFormAnnotation]);
 
   // Refresh selected request from store
   useEffect(() => {
@@ -620,7 +695,7 @@ export default function HDRequestsPage() {
                   <button
                     className="btn btn-primary"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                    onClick={() => { setPreviewFormTemplate(template); setPreviewFormData(linkedSub?.data || {}); setShowFormPreview(true); }}
+                    onClick={() => { setPreviewFormTemplate(template); setPreviewFormData(linkedSub?.data || {}); setPreviewFormSubmission(linkedSub || null); setShowFormPreview(true); }}
                   >
                     <HiOutlineClipboardDocumentList /> {linkedSub ? 'View Submitted Form' : 'View Form Template'}
                   </button>
@@ -827,17 +902,67 @@ export default function HDRequestsPage() {
       {/* ── Form Preview Modal (read-only view of submitted form) ── */}
       <Modal
         isOpen={showFormPreview && !!previewFormTemplate}
-        onClose={() => { setShowFormPreview(false); setPreviewFormTemplate(null); setPreviewFormData({}); }}
+        onClose={() => {
+          setShowFormPreview(false); setPreviewFormTemplate(null); setPreviewFormData({});
+          setPreviewFormSubmission(null); setPreviewAnnotations([]); setShowAnnotationsPanel(false);
+        }}
         title="Submitted Form Preview"
         large
       >
         {previewFormTemplate && (
-          <DynamicFormRenderer
-            template={previewFormTemplate}
-            formData={previewFormData}
-            readOnly
-            bypassRoleLocking
-          />
+          <>
+            {/* ── Annotation toolbar (only when a real submission is linked) ── */}
+            {previewFormSubmission && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <button
+                  className={`btn btn-sm ${showAnnotationsPanel ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setShowAnnotationsPanel(p => !p)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <HiOutlineChatBubbleLeftRight />
+                  Comments
+                  {previewAnnotations.filter(a => !a.resolved).length > 0 && (
+                    <span style={{
+                      background: 'var(--status-warning)', color: '#fff',
+                      borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
+                    }}>
+                      {previewAnnotations.filter(a => !a.resolved).length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
+            <DynamicFormRenderer
+              template={previewFormTemplate}
+              formData={previewFormData}
+              readOnly
+              bypassRoleLocking
+              currentUserRole={user.role}
+              currentUser={user}
+              reviewMode={canAnnotate && !!previewFormSubmission}
+              annotations={previewAnnotations}
+              onAddAnnotation={handleAddAnnotation}
+              onReplyAnnotation={handleReplyAnnotation}
+              onResolveAnnotation={handleResolveAnnotation}
+              onReopenAnnotation={handleReopenAnnotation}
+            />
+
+            {showAnnotationsPanel && previewFormSubmission && (
+              <FormAnnotationsPanel
+                isOpen={showAnnotationsPanel}
+                onClose={() => setShowAnnotationsPanel(false)}
+                annotations={previewAnnotations}
+                currentUser={user}
+                canAnnotate={canAnnotate}
+                canResolve={canAnnotate}
+                onReply={handleReplyAnnotation}
+                onResolve={handleResolveAnnotation}
+                onReopen={handleReopenAnnotation}
+                formTitle={previewFormTemplate?.name || 'Form'}
+              />
+            )}
+          </>
         )}
       </Modal>
 

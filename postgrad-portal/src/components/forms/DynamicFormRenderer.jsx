@@ -10,11 +10,14 @@ import {
   HiOutlineCheckCircle, HiOutlineLockClosed,
   HiOutlineArrowPath, HiOutlineArrowDownTray,
   HiOutlineExclamationTriangle, HiOutlinePaperAirplane,
+  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2';
 import FormFieldRenderer from './FormFieldRenderer';
 import FormSignatureBlock from './FormSignatureBlock';
 import LockedSectionOverlay from './LockedSectionOverlay';
+import FormAnnotationThread from './FormAnnotationThread';
 import './document-form.css';
+import './FormAnnotations.css';
 
 /**
  * @param {Object}   template          – Full template schema
@@ -33,6 +36,12 @@ import './document-form.css';
  * @param {boolean}  readOnly          – entire form is read-only
  * @param {boolean}  bypassRoleLocking  – when true, shows all sections unlocked (no LockedSectionOverlay)
  * @param {Object}   validationErrors  – { [fieldId]: 'message', ... }
+ * @param {boolean}  reviewMode        – enable inline annotation controls for reviewers
+ * @param {Array}    annotations       – flat array of annotation objects for this submission
+ * @param {Function} onAddAnnotation   – (targetType, targetId, targetLabel, text) => void
+ * @param {Function} onReplyAnnotation – (annotationId, text) => void
+ * @param {Function} onResolveAnnotation – (annotationId) => void
+ * @param {Function} onReopenAnnotation  – (annotationId) => void
  */
 export default function DynamicFormRenderer({
   template,
@@ -51,9 +60,29 @@ export default function DynamicFormRenderer({
   readOnly = false,
   bypassRoleLocking = false,
   validationErrors = {},
+  reviewMode = false,
+  annotations = [],
+  onAddAnnotation,
+  onReplyAnnotation,
+  onResolveAnnotation,
+  onReopenAnnotation,
 }) {
   const [referBackComment, setReferBackComment] = useState('');
   const [activeReferBack, setActiveReferBack] = useState(null);
+  // Tracks which field/section is showing its annotation thread inline
+  const [activeAnnotationTarget, setActiveAnnotationTarget] = useState(null); // { type, id } | null
+
+  /* ── Annotation helpers ── */
+  const getAnnotationsForTarget = useCallback(
+    (type, id) => annotations.filter(a => a.targetType === type && a.targetId === id),
+    [annotations],
+  );
+  const getUnresolvedCount = useCallback(
+    (type, id) => getAnnotationsForTarget(type, id).filter(a => !a.resolved).length,
+    [getAnnotationsForTarget],
+  );
+  const canAnnotate = reviewMode && ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(currentUserRole);
+  const canResolve  = canAnnotate;
 
   /* ── Resolve auto-populated values on mount ── */
   useEffect(() => {
@@ -118,12 +147,20 @@ export default function DynamicFormRenderer({
         const isCompleted = status === 'completed';
         const isReferredBack = status === 'referred_back';
 
+        const sectionAnnotations   = getAnnotationsForTarget('section', section.id);
+        const sectionHasOpen        = sectionAnnotations.some(a => !a.resolved);
+        const sectionHasAny         = sectionAnnotations.length > 0;
+        const sectionAllResolved    = sectionHasAny && !sectionHasOpen;
+        const isActiveSectionThread = activeAnnotationTarget?.type === 'section' && activeAnnotationTarget?.id === section.id;
+
         return (
           <div
             key={section.id}
             className={`document-form-section ${
               isCompleted ? 'section-completed' : ''
-            } ${isReferredBack ? 'section-referred-back' : ''}`}
+            } ${isReferredBack ? 'section-referred-back' : ''} ${
+              reviewMode && sectionHasOpen ? 'has-annotation' : ''
+            } ${reviewMode && sectionAllResolved ? 'has-resolved-only' : ''}`}
           >
             {/* Section header */}
             <div className="document-form-section-header">
@@ -133,7 +170,27 @@ export default function DynamicFormRenderer({
                 )}
                 <h3>{section.title}</h3>
                 <SectionStatusBadge status={status} role={section.assignedRole} />
+                {reviewMode && sectionHasAny && (
+                  <span className={`fat-section-badge ${sectionAllResolved ? 'resolved' : ''}`}>
+                    <HiOutlineChatBubbleLeftRight />
+                    {sectionAllResolved ? 'resolved' : `${getUnresolvedCount('section', section.id)} open`}
+                  </span>
+                )}
               </div>
+              {reviewMode && (
+                <button
+                  className={`fat-trigger-btn ${
+                    sectionHasOpen ? 'has-open' : sectionAllResolved ? 'all-resolved' : ''
+                  }`}
+                  title="Annotate this section"
+                  onClick={() => setActiveAnnotationTarget(
+                    isActiveSectionThread ? null : { type: 'section', id: section.id }
+                  )}
+                >
+                  <HiOutlineChatBubbleLeftRight />
+                  {isActiveSectionThread ? 'Close' : 'Comment'}
+                </button>
+              )}
               {isReferredBack && (
                 <div className="section-referred-back-banner">
                   <HiOutlineExclamationTriangle />
@@ -157,18 +214,81 @@ export default function DynamicFormRenderer({
                 if (field.conditionalOn && !evaluateCondition(field.conditionalOn, formData)) {
                   return null;
                 }
+                const fieldAnnotations    = getAnnotationsForTarget('field', field.id);
+                const fieldHasOpen        = fieldAnnotations.some(a => !a.resolved);
+                const fieldHasAny         = fieldAnnotations.length > 0;
+                const fieldAllResolved    = fieldHasAny && !fieldHasOpen;
+                const isActiveFieldThread = activeAnnotationTarget?.type === 'field' && activeAnnotationTarget?.id === field.id;
+
                 return (
-                  <FormFieldRenderer
-                    key={field.id}
-                    field={field}
-                    value={formData[field.id]}
-                    onChange={(val) => onFieldChange?.(field.id, val)}
-                    disabled={!isEditable}
-                    error={validationErrors[field.id]}
-                    currentUser={currentUser}
-                    studentProfile={studentProfile}
-                    allFormData={formData}
-                  />
+                  <div key={field.id} className="fat-field-wrapper">
+                    <FormFieldRenderer
+                      field={field}
+                      value={formData[field.id]}
+                      onChange={(val) => onFieldChange?.(field.id, val)}
+                      disabled={!isEditable}
+                      error={validationErrors[field.id]}
+                      currentUser={currentUser}
+                      studentProfile={studentProfile}
+                      allFormData={formData}
+                    />
+                    {/* Annotation trigger button – visible in reviewMode */}
+                    {reviewMode && (
+                      <div className="fat-field-actions">
+                        <button
+                          className={`fat-trigger-btn ${
+                            fieldHasOpen ? 'has-open' : fieldAllResolved ? 'all-resolved' : ''
+                          }`}
+                          onClick={() => setActiveAnnotationTarget(
+                            isActiveFieldThread ? null : { type: 'field', id: field.id }
+                          )}
+                          title={fieldHasAny ? 'View / add comment' : 'Add comment'}
+                        >
+                          <HiOutlineChatBubbleLeftRight />
+                          {fieldHasOpen
+                            ? `${getUnresolvedCount('field', field.id)} open`
+                            : fieldAllResolved
+                            ? 'resolved'
+                            : 'comment'}
+                        </button>
+                      </div>
+                    )}
+                    {/* Inline annotation thread(s) expand below the field */}
+                    {isActiveFieldThread && (
+                      <div>
+                        {fieldAnnotations.map(ann => (
+                          <FormAnnotationThread
+                            key={ann.id}
+                            annotation={ann}
+                            currentUser={currentUser}
+                            canAnnotate={canAnnotate}
+                            canResolve={canResolve}
+                            onAdd={(text) => onAddAnnotation?.('field', field.id, field.label || field.id, text)}
+                            onReply={(id, text) => onReplyAnnotation?.(id, text)}
+                            onResolve={(id) => onResolveAnnotation?.(id)}
+                            onReopen={(id) => onReopenAnnotation?.(id)}
+                            onClose={null}
+                          />
+                        ))}
+                        {(canAnnotate) && (
+                          <FormAnnotationThread
+                            annotation={null}
+                            currentUser={currentUser}
+                            canAnnotate={canAnnotate}
+                            canResolve={canResolve}
+                            onAdd={(text) => onAddAnnotation?.('field', field.id, field.label || field.id, text)}
+                            onReply={null}
+                            onResolve={null}
+                            onReopen={null}
+                            onClose={() => setActiveAnnotationTarget(null)}
+                          />
+                        )}
+                        {!canAnnotate && fieldAnnotations.length === 0 && (
+                          <div className="fat-resolved-footer">No comments yet.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
@@ -184,6 +304,42 @@ export default function DynamicFormRenderer({
                 />
               )}
             </div>
+
+            {/* Section-level annotation thread */}
+            {isActiveSectionThread && (
+              <div style={{ padding: '0 16px 8px' }}>
+                {sectionAnnotations.map(ann => (
+                  <FormAnnotationThread
+                    key={ann.id}
+                    annotation={ann}
+                    currentUser={currentUser}
+                    canAnnotate={canAnnotate}
+                    canResolve={canResolve}
+                    onAdd={(text) => onAddAnnotation?.('section', section.id, section.title || section.id, text)}
+                    onReply={(id, text) => onReplyAnnotation?.(id, text)}
+                    onResolve={(id) => onResolveAnnotation?.(id)}
+                    onReopen={(id) => onReopenAnnotation?.(id)}
+                    onClose={null}
+                  />
+                ))}
+                {canAnnotate && (
+                  <FormAnnotationThread
+                    annotation={null}
+                    currentUser={currentUser}
+                    canAnnotate={canAnnotate}
+                    canResolve={canResolve}
+                    onAdd={(text) => onAddAnnotation?.('section', section.id, section.title || section.id, text)}
+                    onReply={null}
+                    onResolve={null}
+                    onReopen={null}
+                    onClose={() => setActiveAnnotationTarget(null)}
+                  />
+                )}
+                {!canAnnotate && sectionAnnotations.length === 0 && (
+                  <div className="fat-resolved-footer">No comments yet.</div>
+                )}
+              </div>
+            )}
 
             {/* Section actions */}
             {isEditable && !isCompleted && (

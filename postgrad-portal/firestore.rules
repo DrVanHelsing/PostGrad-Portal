@@ -109,6 +109,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── Form Annotations (inline threaded comments on form fields/sections) ──
+    match /formAnnotations/{annotationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     // ── DEV FALLBACK ──
     // Allows full app functionality when Firebase Auth is not initialized
     // on a fresh project. Tighten/remove once Auth provider is enabled.
