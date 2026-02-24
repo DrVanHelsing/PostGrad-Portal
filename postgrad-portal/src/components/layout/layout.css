@@ -49,16 +49,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 2px;
 }
-.sidebar-brand-icon {
-  width: 200%;
-  max-width: 315px;
+.sidebar-brand-crest {
+  width: 76px;
   height: auto;
-  object-fit: contain;
-  flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+}
+.sidebar-brand-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.sidebar-brand-university {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: center;
+  line-height: 1.35;
+  margin: 0;
 }
 .sidebar-brand-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--uwc-gold);
   line-height: 1.3;

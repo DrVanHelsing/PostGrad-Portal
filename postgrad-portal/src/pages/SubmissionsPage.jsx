@@ -812,8 +812,8 @@ function NewSubmissionView({ user, getStudentProfile, createThesisSubmission, ad
         {STEPS.map((s, i) => (
           <span key={s.num} style={{ display: 'contents' }}>
             <span className={`sub-wizard-step ${step === s.num ? 'active' : step > s.num ? 'completed' : ''}`}>
-              {step > s.num ? <HiOutlineCheckCircle /> : s.num}
-              {s.label}
+              {step > s.num ? <HiOutlineCheckCircle /> : <span>{s.num}</span>}
+              <span>{s.label}</span>
             </span>
             {i < STEPS.length - 1 && <span className="sub-wizard-connector"><HiOutlineChevronRight /></span>}
           </span>

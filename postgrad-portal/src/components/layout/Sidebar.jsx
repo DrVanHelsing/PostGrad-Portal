@@ -93,9 +93,19 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-logo">
-          <img src="/uwc_logo.svg" alt="University of the Western Cape" className="sidebar-brand-icon" />
+          {/* Inline SVG crops the wide logo to show only the coat of arms */}
+          <svg
+            viewBox="85 30 200 225"
+            className="sidebar-brand-crest"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <image href="/uwc_logo.svg" x="0" y="0" width="833.43752" height="297.00009" />
+          </svg>
         </div>
-        <h1 className="sidebar-brand-title">PostGrad Portal</h1>
+        <div className="sidebar-brand-text-group">
+          <p className="sidebar-brand-university">University of the Western Cape</p>
+          <h1 className="sidebar-brand-title">PostGrad Portal</h1>
+        </div>
       </div>
 
       {/* Navigation */}

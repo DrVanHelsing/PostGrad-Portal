@@ -97,6 +97,62 @@ const STATUS_FILTERS = [
   { key: 'referred_back', label: 'Referred Back' },
 ];
 
+const STAGE_ROWS = [
+  ['submitted_to_supervisor', 'Submitted', 'var(--status-info)'],
+  ['supervisor_review', 'Supervisor', 'var(--uwc-navy)'],
+  ['co_supervisor_review', 'Co-Supervisor', 'var(--status-purple)'],
+  ['coordinator_review', 'Coordinator', 'var(--uwc-gold)'],
+  ['fhd_pending', 'Faculty Board', 'var(--status-teal)'],
+  ['shd_pending', 'Senate Board', 'var(--status-indigo)'],
+  ['approved', 'Approved', 'var(--status-success)'],
+  ['referred_back', 'Referred Back', 'var(--status-danger)'],
+];
+
+function WorkflowBar({ stageCounts, milestoneCounts, attentionCount }) {
+  const maxStage = Math.max(...STAGE_ROWS.map(([k]) => stageCounts[k] || 0), 1);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18 }}>
+      <div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>Workflow Load</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {STAGE_ROWS.map(([key, label, color]) => {
+            const count = stageCounts[key] || 0;
+            return (
+              <div key={key}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontWeight: 700, color: count > 0 ? color : 'var(--text-tertiary)' }}>{count}</span>
+                </div>
+                <div style={{ height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${(count / maxStage) * 100}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.4s ease', minWidth: count > 0 ? 4 : 0 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>Milestone Mix</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {Object.entries(milestoneCounts).length === 0 ? (
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>No milestones recorded.</div>
+          ) : (
+            Object.entries(milestoneCounts).map(([type, count]) => (
+              <div key={type} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{MILESTONE_TYPE_LABELS[type] || type}</span>
+                <strong style={{ fontSize: 12 }}>{count}</strong>
+              </div>
+            ))
+          )}
+          <div style={{ marginTop: 8, fontSize: 12, color: attentionCount > 0 ? 'var(--status-warning)' : 'var(--status-success)', fontWeight: 600 }}>
+            {attentionCount > 0 ? `${attentionCount} item(s) currently require attention` : 'No immediate bottlenecks detected'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActivityPulsePanel({ requests, milestones }) {
   const stageCounts = useMemo(() => {
     const counts = Object.fromEntries(WORKFLOW_STATES.map(s => [s, 0]));
@@ -123,46 +179,7 @@ function ActivityPulsePanel({ requests, milestones }) {
       <Card>
       <CardHeader title="Lifecycle Overview" icon={<HiOutlineSparkles />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)" />
       <CardBody>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18 }}>
-          <div>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>Workflow Load</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {[
-                ['submitted_to_supervisor', 'Submitted'],
-                ['supervisor_review', 'Supervisor'],
-                ['co_supervisor_review', 'Co-Supervisor'],
-                ['coordinator_review', 'Coordinator'],
-                ['fhd_pending', 'Faculty Board'],
-                ['shd_pending', 'Senate Board'],
-                ['approved', 'Approved'],
-                ['referred_back', 'Referred Back'],
-              ].map(([key, label]) => (
-                <div key={key} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '8px 10px', minWidth: 115 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: key === 'referred_back' ? 'var(--status-danger)' : 'var(--text-primary)' }}>{stageCounts[key] || 0}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>Milestone Mix</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {Object.entries(milestoneCounts).length === 0 ? (
-                <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>No milestones recorded.</div>
-              ) : (
-                Object.entries(milestoneCounts).map(([type, count]) => (
-                  <div key={type} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{MILESTONE_TYPE_LABELS[type] || type}</span>
-                    <strong style={{ fontSize: 12 }}>{count}</strong>
-                  </div>
-                ))
-              )}
-              <div style={{ marginTop: 8, fontSize: 12, color: attentionCount > 0 ? 'var(--status-warning)' : 'var(--status-success)', fontWeight: 600 }}>
-                {attentionCount > 0 ? `${attentionCount} item(s) currently require attention` : 'No immediate bottlenecks detected'}
-              </div>
-            </div>
-          </div>
-        </div>
+        <WorkflowBar stageCounts={stageCounts} milestoneCounts={milestoneCounts} attentionCount={attentionCount} />
       </CardBody>
       </Card>
     </div>
