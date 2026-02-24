@@ -625,3 +625,176 @@
 [data-theme="dark"] .fap-panel {
   background: #1a2035;
 }
+
+/* ── Highlight Annotations ── */
+
+/* Field wrapper with active highlights */
+.fat-field-wrapper.has-highlight {
+  border-left: 3px solid #f59e0b;
+  padding-left: 8px;
+  background: rgba(245, 158, 11, 0.03);
+  border-radius: var(--radius-sm);
+}
+
+/* Highlight badges below a field */
+.fat-highlight-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 2px 0;
+  padding: 0 4px;
+}
+.fat-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fat-highlight-badge:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+.fat-highlight-badge svg {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+/* Highlight popover (appears on text selection) */
+.fat-highlight-popover {
+  margin: 8px 0;
+  border: 1px solid var(--border-default);
+  border-left: 3px solid #f59e0b;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-md);
+  animation: fatSlideIn 0.15s ease;
+}
+.fat-highlight-popover-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 8px;
+}
+.fat-highlight-popover-quote {
+  background: rgba(245, 158, 11, 0.10);
+  border-left: 2px solid #f59e0b;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+.fat-highlight-popover-input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  resize: vertical;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.fat-highlight-popover-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+.fat-highlight-popover-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Highlight snippet in thread (FormAnnotationThread) */
+.fat-highlight-snippet {
+  margin: 4px 0 6px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+}
+.fat-highlight-snippet-label {
+  font-weight: 600;
+  color: #b45309;
+  font-size: 11px;
+}
+.fat-highlight-mark {
+  background: rgba(245, 158, 11, 0.20);
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-style: italic;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* Highlight snippet in panel (FormAnnotationsPanel) */
+.fap-highlight-snippet {
+  padding: 4px 12px 6px 40px;
+  font-size: 12px;
+}
+.fap-highlight-mark {
+  background: rgba(245, 158, 11, 0.18);
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-style: italic;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* Clickable thread target in panel */
+.fap-thread-target-clickable {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.fap-thread-target-clickable:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+/* Threads container */
+.fat-threads-container {
+  animation: fatSlideIn 0.15s ease;
+}
+
+/* Dark mode adjustments for highlights */
+[data-theme="dark"] .fat-field-wrapper.has-highlight {
+  background: rgba(245, 158, 11, 0.05);
+  border-left-color: #d97706;
+}
+[data-theme="dark"] .fat-highlight-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+[data-theme="dark"] .fat-highlight-popover {
+  background: var(--bg-secondary);
+  border-color: rgba(255,255,255,0.08);
+}
+[data-theme="dark"] .fat-highlight-popover-input {
+  background: var(--bg-primary);
+  border-color: rgba(255,255,255,0.1);
+}
+[data-theme="dark"] .fat-highlight-mark,
+[data-theme="dark"] .fap-highlight-mark {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}

@@ -232,6 +232,66 @@ const FORM_ANNOTATIONS = [
     resolvedAt:   ts('2025-11-18T09:15:00'),
     replies: [],
   },
+
+  /* ── Title Registration (fs-001) – highlight annotation on research description */
+  {
+    id: 'fa-008',
+    submissionId: 'fs-001',
+    requestId:    'hdr-001',
+    targetType:   'highlight',
+    targetId:     'highlight-research_description-1738600000000',
+    targetLabel:  'Brief Description of Research',
+    highlightText: 'deep learning models for medical imaging',
+    highlightFieldId: 'research_description',
+    authorId:     'supervisor-001',
+    authorName:   'Prof. Sarah van der Berg',
+    authorRole:   'supervisor',
+    text: 'Please be more specific about which deep learning architectures you plan to use – CNNs, Vision Transformers, or hybrid approaches?',
+    createdAt:    ts('2026-02-03T10:30:00'),
+    resolved:     false,
+    resolvedBy:   null,
+    resolvedAt:   null,
+    replies: [
+      {
+        id: 'reply-fa-008-a',
+        authorId:   'student-001',
+        authorName: 'Thabo Molefe',
+        authorRole: 'student',
+        text: 'Good point – I will specify ResNet-50 and DenseNet-121 as baseline CNNs with a comparison to Vision Transformers.',
+        createdAt: ts('2026-02-03T15:20:00'),
+      },
+    ],
+  },
+
+  /* ── Progress Report (fs-002) – highlight annotation resolved */
+  {
+    id: 'fa-009',
+    submissionId: 'fs-002',
+    requestId:    'hdr-002',
+    targetType:   'highlight',
+    targetId:     'highlight-milestones_achieved-1732000000000',
+    targetLabel:  'Key Milestones Achieved',
+    highlightText: 'ethics approval obtained',
+    highlightFieldId: 'milestones_achieved',
+    authorId:     'coordinator-001',
+    authorName:   'Dr. Fatima Abrahams',
+    authorRole:   'coordinator',
+    text: 'Please attach the ethics approval certificate number as a reference in this field.',
+    createdAt:    ts('2025-11-14T09:15:00'),
+    resolved:     true,
+    resolvedBy:   'coordinator-001',
+    resolvedAt:   ts('2025-11-16T10:00:00'),
+    replies: [
+      {
+        id: 'reply-fa-009-a',
+        authorId:   'student-001',
+        authorName: 'Thabo Molefe',
+        authorRole: 'student',
+        text: 'Added: Ethics clearance ref BM22/6/15 granted 2025-08-20.',
+        createdAt:  ts('2025-11-15T13:45:00'),
+      },
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────

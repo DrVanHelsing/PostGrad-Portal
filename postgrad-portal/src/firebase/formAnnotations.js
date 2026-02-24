@@ -46,17 +46,20 @@ export function subscribeToFormAnnotations(submissionId, callback) {
 
 /**
  * Add a brand-new annotation thread on a field or section.
+ * Supports optional text highlighting via highlightText / highlightFieldId.
  */
 export async function addFormAnnotation({
   submissionId,
   requestId,
-  targetType, // 'field' | 'section'
+  targetType, // 'field' | 'section' | 'highlight'
   targetId,
   targetLabel,
   authorId,
   authorName,
   authorRole,
   text,
+  highlightText,   // the selected text snippet (for highlight annotations)
+  highlightFieldId, // which field the highlight belongs to
 }) {
   const ref = await addDoc(collection(db, COL), {
     submissionId,
@@ -68,6 +71,8 @@ export async function addFormAnnotation({
     authorName,
     authorRole,
     text,
+    highlightText: highlightText || null,
+    highlightFieldId: highlightFieldId || null,
     createdAt: serverTimestamp(),
     resolved: false,
     resolvedBy: null,

@@ -152,6 +152,13 @@ export default function FormAnnotationThread({
                 <span className="fat-message-time">{timeSince(annotation.createdAt)}</span>
               </div>
               <div className="fat-message-text">{annotation.text}</div>
+              {/* Highlighted text snippet */}
+              {annotation.highlightText && (
+                <div className="fat-highlight-snippet">
+                  <span className="fat-highlight-snippet-label">Highlighted:</span>
+                  <mark className="fat-highlight-mark">&ldquo;{annotation.highlightText}&rdquo;</mark>
+                </div>
+              )}
             </div>
           </div>
 

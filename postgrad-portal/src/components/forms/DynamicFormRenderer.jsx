@@ -2,15 +2,17 @@
 // DynamicFormRenderer – Master form renderer
 // Builds a complete multi-section form from a
 // template schema JSON. Handles role-gating,
-// conditional visibility, signatures, and
-// auto-populated fields.
+// conditional visibility, signatures, 
+// auto-populated fields, and unified inline
+// comments + text-highlight annotations.
 // ============================================
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   HiOutlineCheckCircle, HiOutlineLockClosed,
   HiOutlineArrowPath, HiOutlineArrowDownTray,
   HiOutlineExclamationTriangle, HiOutlinePaperAirplane,
   HiOutlineChatBubbleLeftRight,
+  HiOutlinePencilSquare,
 } from 'react-icons/hi2';
 import FormFieldRenderer from './FormFieldRenderer';
 import FormSignatureBlock from './FormSignatureBlock';
@@ -36,12 +38,13 @@ import './FormAnnotations.css';
  * @param {boolean}  readOnly          – entire form is read-only
  * @param {boolean}  bypassRoleLocking  – when true, shows all sections unlocked (no LockedSectionOverlay)
  * @param {Object}   validationErrors  – { [fieldId]: 'message', ... }
- * @param {boolean}  reviewMode        – enable inline annotation controls for reviewers
+ * @param {boolean}  reviewMode        – enable inline annotation controls
  * @param {Array}    annotations       – flat array of annotation objects for this submission
- * @param {Function} onAddAnnotation   – (targetType, targetId, targetLabel, text) => void
+ * @param {Function} onAddAnnotation   – (targetType, targetId, targetLabel, text, extra) => void
  * @param {Function} onReplyAnnotation – (annotationId, text) => void
  * @param {Function} onResolveAnnotation – (annotationId) => void
  * @param {Function} onReopenAnnotation  – (annotationId) => void
+ * @param {Function} onScrollToAnnotation – (annotationId) => void  (called from sidebar)
  */
 export default function DynamicFormRenderer({
   template,
@@ -66,23 +69,53 @@ export default function DynamicFormRenderer({
   onReplyAnnotation,
   onResolveAnnotation,
   onReopenAnnotation,
+  onScrollToAnnotation,
 }) {
   const [referBackComment, setReferBackComment] = useState('');
   const [activeReferBack, setActiveReferBack] = useState(null);
   // Tracks which field/section is showing its annotation thread inline
   const [activeAnnotationTarget, setActiveAnnotationTarget] = useState(null); // { type, id } | null
+  // Text-highlight selection state
+  const [highlightSelection, setHighlightSelection] = useState(null); // { fieldId, fieldLabel, text } | null
+  const formRef = useRef(null);
 
   /* ── Annotation helpers ── */
   const getAnnotationsForTarget = useCallback(
     (type, id) => annotations.filter(a => a.targetType === type && a.targetId === id),
     [annotations],
   );
+  const getHighlightAnnotationsForField = useCallback(
+    (fieldId) => annotations.filter(a => a.targetType === 'highlight' && a.highlightFieldId === fieldId),
+    [annotations],
+  );
+  const getAllAnnotationsForField = useCallback(
+    (fieldId) => annotations.filter(
+      a => (a.targetType === 'field' && a.targetId === fieldId)
+        || (a.targetType === 'highlight' && a.highlightFieldId === fieldId)
+    ),
+    [annotations],
+  );
   const getUnresolvedCount = useCallback(
     (type, id) => getAnnotationsForTarget(type, id).filter(a => !a.resolved).length,
     [getAnnotationsForTarget],
   );
-  const canAnnotate = reviewMode; // all authenticated users can leave comments
+  const getUnresolvedFieldCount = useCallback(
+    (fieldId) => getAllAnnotationsForField(fieldId).filter(a => !a.resolved).length,
+    [getAllAnnotationsForField],
+  );
+  const canAnnotate = reviewMode; // all authenticated users can comment
   const canResolve  = reviewMode && ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(currentUserRole);
+
+  /* ── Handle text selection for highlighting ── */
+  const handleTextSelect = useCallback((fieldId, fieldLabel) => {
+    if (!reviewMode) return;
+    const sel = window.getSelection();
+    const text = sel?.toString().trim();
+    if (text && text.length > 0) {
+      setHighlightSelection({ fieldId, fieldLabel, text });
+      setActiveAnnotationTarget({ type: 'highlight', id: fieldId });
+    }
+  }, [reviewMode]);
 
   /* ── Resolve auto-populated values on mount ── */
   useEffect(() => {
@@ -224,14 +257,23 @@ export default function DynamicFormRenderer({
                 if (field.conditionalOn && !evaluateCondition(field.conditionalOn, formData)) {
                   return null;
                 }
-                const fieldAnnotations    = getAnnotationsForTarget('field', field.id);
-                const fieldHasOpen        = fieldAnnotations.some(a => !a.resolved);
-                const fieldHasAny         = fieldAnnotations.length > 0;
-                const fieldAllResolved    = fieldHasAny && !fieldHasOpen;
-                const isActiveFieldThread = activeAnnotationTarget?.type === 'field' && activeAnnotationTarget?.id === field.id;
+                const fieldAnnotations     = getAnnotationsForTarget('field', field.id);
+                const highlightAnnotations = getHighlightAnnotationsForField(field.id);
+                const allFieldAnnotations  = getAllAnnotationsForField(field.id);
+                const fieldHasOpen         = allFieldAnnotations.some(a => !a.resolved);
+                const fieldHasAny          = allFieldAnnotations.length > 0;
+                const fieldAllResolved     = fieldHasAny && !fieldHasOpen;
+                const isActiveFieldThread  =
+                  (activeAnnotationTarget?.type === 'field' && activeAnnotationTarget?.id === field.id)
+                  || (activeAnnotationTarget?.type === 'highlight' && activeAnnotationTarget?.id === field.id);
 
                 return (
-                  <div key={field.id} className="fat-field-wrapper">
+                  <div
+                    key={field.id}
+                    className={`fat-field-wrapper ${reviewMode && highlightAnnotations.some(a => !a.resolved) ? 'has-highlight' : ''}`}
+                    data-field-id={field.id}
+                    onMouseUp={() => handleTextSelect(field.id, field.label || field.id)}
+                  >
                     <FormFieldRenderer
                       field={field}
                       value={formData[field.id]}
@@ -242,6 +284,48 @@ export default function DynamicFormRenderer({
                       studentProfile={studentProfile}
                       allFormData={formData}
                     />
+
+                    {/* Highlight annotation badges (shown under field) */}
+                    {reviewMode && highlightAnnotations.filter(a => !a.resolved).length > 0 && (
+                      <div className="fat-highlight-badges">
+                        {highlightAnnotations.filter(a => !a.resolved).map(ha => (
+                          <span
+                            key={ha.id}
+                            className="fat-highlight-badge"
+                            title={`"${ha.highlightText}" – ${ha.text}`}
+                            onClick={() => setActiveAnnotationTarget(
+                              isActiveFieldThread ? null : { type: 'highlight', id: field.id }
+                            )}
+                          >
+                            <HiOutlinePencilSquare />
+                            &ldquo;{ha.highlightText.length > 30 ? ha.highlightText.substring(0, 30) + '…' : ha.highlightText}&rdquo;
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Text-selection highlight popover */}
+                    {highlightSelection?.fieldId === field.id && (
+                      <HighlightAnnotationPopover
+                        selectedText={highlightSelection.text}
+                        onSubmit={(commentText) => {
+                          onAddAnnotation?.(
+                            'highlight',
+                            `highlight-${field.id}-${Date.now()}`,
+                            field.label || field.id,
+                            commentText,
+                            { highlightText: highlightSelection.text, highlightFieldId: field.id },
+                          );
+                          setHighlightSelection(null);
+                          window.getSelection()?.removeAllRanges();
+                        }}
+                        onCancel={() => {
+                          setHighlightSelection(null);
+                          window.getSelection()?.removeAllRanges();
+                        }}
+                      />
+                    )}
+
                     {/* Annotation trigger button – visible in reviewMode */}
                     {reviewMode && (
                       <div className="fat-field-actions">
@@ -256,16 +340,18 @@ export default function DynamicFormRenderer({
                         >
                           <HiOutlineChatBubbleLeftRight />
                           {fieldHasOpen
-                            ? `${getUnresolvedCount('field', field.id)} open`
+                            ? `${getUnresolvedFieldCount(field.id)} open`
                             : fieldAllResolved
                             ? 'resolved'
                             : 'comment'}
                         </button>
                       </div>
                     )}
+
                     {/* Inline annotation thread(s) expand below the field */}
                     {isActiveFieldThread && (
-                      <div>
+                      <div className="fat-threads-container">
+                        {/* Regular field annotations */}
                         {fieldAnnotations.map(ann => (
                           <FormAnnotationThread
                             key={ann.id}
@@ -280,7 +366,23 @@ export default function DynamicFormRenderer({
                             onClose={null}
                           />
                         ))}
-                        {(canAnnotate) && (
+                        {/* Highlight annotations for this field */}
+                        {highlightAnnotations.map(ann => (
+                          <FormAnnotationThread
+                            key={ann.id}
+                            annotation={ann}
+                            currentUser={currentUser}
+                            canAnnotate={canAnnotate}
+                            canResolve={canResolve}
+                            onAdd={null}
+                            onReply={(id, text) => onReplyAnnotation?.(id, text)}
+                            onResolve={(id) => onResolveAnnotation?.(id)}
+                            onReopen={(id) => onReopenAnnotation?.(id)}
+                            onClose={null}
+                          />
+                        ))}
+                        {/* New comment form */}
+                        {canAnnotate && (
                           <FormAnnotationThread
                             annotation={null}
                             currentUser={currentUser}
@@ -293,7 +395,7 @@ export default function DynamicFormRenderer({
                             onClose={() => setActiveAnnotationTarget(null)}
                           />
                         )}
-                        {!canAnnotate && fieldAnnotations.length === 0 && (
+                        {!canAnnotate && allFieldAnnotations.length === 0 && (
                           <div className="fat-resolved-footer">No comments yet.</div>
                         )}
                       </div>
@@ -606,6 +708,37 @@ function resolveAutoPopulate(config, currentUser, studentProfile) {
     return studentProfile[field] || '';
   }
   return '';
+}
+
+
+/* ── Inline Highlight Annotation Popover ── */
+function HighlightAnnotationPopover({ selectedText, onSubmit, onCancel }) {
+  const [text, setText] = useState('');
+  return (
+    <div className="fat-highlight-popover">
+      <div className="fat-highlight-popover-header">
+        <HiOutlinePencilSquare />
+        <span>Annotate selected text</span>
+      </div>
+      <div className="fat-highlight-popover-quote">
+        &ldquo;{selectedText.length > 80 ? selectedText.substring(0, 80) + '…' : selectedText}&rdquo;
+      </div>
+      <textarea
+        className="fat-highlight-popover-input"
+        placeholder="Add your comment about this text…"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        rows={2}
+        autoFocus
+      />
+      <div className="fat-highlight-popover-actions">
+        <button className="btn btn-primary btn-sm" disabled={!text.trim()} onClick={() => onSubmit(text.trim())}>
+          <HiOutlinePaperAirplane /> Add Comment
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
 }
 
 

@@ -117,6 +117,11 @@ export default function HDRequestsPage() {
   const annotationUnsubRef = useRef(null);
   const [formRequiredAttachments, setFormRequiredAttachments] = useState({});
 
+  /* ── Form Fill annotation state (mirrors preview annotation state) ── */
+  const [formFillAnnotations, setFormFillAnnotations] = useState([]);
+  const [showFormFillAnnotationsPanel, setShowFormFillAnnotationsPanel] = useState(false);
+  const formFillAnnotationUnsubRef = useRef(null);
+
   /* ── UserPicker state (for supervisor/coordinator selection) ── */
   const [showSupervisorPicker, setShowSupervisorPicker] = useState(false);
   const [showCoordinatorPicker, setShowCoordinatorPicker] = useState(false);
@@ -148,26 +153,44 @@ export default function HDRequestsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showFormPreview, previewFormSubmission?.id]);
 
+  /* ── Form Fill annotation subscription (live updates while filling a form) ── */
+  useEffect(() => {
+    if (activeFormTemplate && activeFormSubmission?.id) {
+      formFillAnnotationUnsubRef.current?.();
+      formFillAnnotationUnsubRef.current = subscribeToFormAnnotations(activeFormSubmission.id, setFormFillAnnotations);
+    } else {
+      formFillAnnotationUnsubRef.current?.();
+      formFillAnnotationUnsubRef.current = null;
+      setFormFillAnnotations([]);
+    }
+    return () => formFillAnnotationUnsubRef.current?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFormTemplate, activeFormSubmission?.id]);
+
   /* ── Annotation permission helper ── */
   const canAnnotate = true; // all roles can leave comments; canResolve is controlled in DynamicFormRenderer
 
-  /* ── Annotation handlers ── */
-  const handleAddAnnotation = useCallback(async (targetType, targetId, targetLabel, text) => {
-    if (!previewFormSubmission?.id) return;
+  /* ── Annotation handlers (support both preview and form fill contexts) ── */
+  const handleAddAnnotation = useCallback(async (targetType, targetId, targetLabel, text, extra = {}) => {
+    // Determine which submission context we're in
+    const submissionCtx = previewFormSubmission || activeFormSubmission;
+    if (!submissionCtx?.id) return;
     try {
       await addFormAnnotation({
-        submissionId: previewFormSubmission.id,
-        requestId: previewFormSubmission.requestId || previewFormSubmission.hdRequestId || '',
+        submissionId: submissionCtx.id,
+        requestId: submissionCtx.requestId || submissionCtx.hdRequestId || '',
         targetType, targetId, targetLabel,
         authorId: user.id, authorName: user.name, authorRole: user.role,
         text,
+        highlightText: extra.highlightText || '',
+        highlightFieldId: extra.highlightFieldId || '',
       });
     } catch (err) {
       console.error('addFormAnnotation failed', err);
       showToast('Failed to add comment', 'error');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addFormAnnotation, previewFormSubmission, user]);
+  }, [addFormAnnotation, previewFormSubmission, activeFormSubmission, user]);
 
   const handleReplyAnnotation = useCallback(async (annotationId, text) => {
     try {
@@ -995,6 +1018,22 @@ export default function HDRequestsPage() {
       >
         {activeFormTemplate && (
           <>
+            {/* ── Annotation toolbar for Form Fill ── */}
+            <div className="form-annotation-toolbar" style={{
+              display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 'var(--space-sm)',
+              padding: '0 var(--space-sm)',
+            }}>
+              <button
+                className={`btn btn-outline btn-sm ${formFillAnnotations.filter(a => !a.resolved).length > 0 ? 'btn-outline-warning' : ''}`}
+                onClick={() => setShowFormFillAnnotationsPanel(true)}
+              >
+                <HiOutlineChatBubbleLeftRight />
+                {formFillAnnotations.length > 0
+                  ? `Comments (${formFillAnnotations.filter(a => !a.resolved).length} open)`
+                  : 'Comments'}
+              </button>
+            </div>
+
             {/* ── Auto-prefilled Supervisor / Coordinator Info ── */}
             {(() => {
               const prof = getStudentProfile(user.id);
@@ -1176,6 +1215,26 @@ export default function HDRequestsPage() {
               }
             }}
             validationErrors={formValidationErrors}
+            reviewMode={true}
+            annotations={formFillAnnotations}
+            onAddAnnotation={handleAddAnnotation}
+            onReplyAnnotation={handleReplyAnnotation}
+            onResolveAnnotation={handleResolveAnnotation}
+            onReopenAnnotation={handleReopenAnnotation}
+          />
+
+          {/* Form Fill Annotations Panel (sidebar) */}
+          <FormAnnotationsPanel
+            isOpen={showFormFillAnnotationsPanel}
+            onClose={() => setShowFormFillAnnotationsPanel(false)}
+            annotations={formFillAnnotations}
+            currentUser={user}
+            canAnnotate={canAnnotate}
+            canResolve={['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(user.role)}
+            onReply={handleReplyAnnotation}
+            onResolve={handleResolveAnnotation}
+            onReopen={handleReopenAnnotation}
+            formTitle={activeFormTemplate?.name || 'Form'}
           />
           </>
         )}

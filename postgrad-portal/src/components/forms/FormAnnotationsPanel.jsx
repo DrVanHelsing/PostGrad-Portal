@@ -157,14 +157,32 @@ export default function FormAnnotationsPanel({
           {displayed.map((ann) => (
             <div key={ann.id} className={`fap-thread ${ann.resolved ? 'fap-thread-resolved' : ''}`}>
               {/* Thread location */}
-              <div className="fap-thread-target">
+              <div
+                className="fap-thread-target fap-thread-target-clickable"
+                onClick={() => {
+                  // Scroll to the field in the form
+                  const fieldId = ann.highlightFieldId || ann.targetId;
+                  const el = document.querySelector(`[data-field-id="${fieldId}"]`);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                title="Click to scroll to field"
+              >
                 {ann.resolved
                   ? <HiOutlineCheckCircle className="fap-target-icon fap-target-resolved" />
                   : <HiOutlineExclamationCircle className="fap-target-icon fap-target-open" />
                 }
                 <span className="fap-target-label">{ann.targetLabel || ann.targetId}</span>
-                <span className="fap-target-type">{ann.targetType === 'section' ? 'section' : 'field'}</span>
+                <span className="fap-target-type">
+                  {ann.targetType === 'section' ? 'section' : ann.targetType === 'highlight' ? 'highlight' : 'field'}
+                </span>
               </div>
+
+              {/* Highlighted text snippet */}
+              {ann.highlightText && (
+                <div className="fap-highlight-snippet">
+                  <mark className="fap-highlight-mark">&ldquo;{ann.highlightText}&rdquo;</mark>
+                </div>
+              )}
 
               {/* Root message */}
               <div className="fap-message">
