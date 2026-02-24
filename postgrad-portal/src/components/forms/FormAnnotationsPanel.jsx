@@ -85,6 +85,12 @@ export default function FormAnnotationsPanel({
   const [filter, setFilter] = useState('open'); // 'all' | 'open' | 'resolved'
   const [replyTexts, setReplyTexts] = useState({});
   const [submitting, setSubmitting] = useState(null);
+  const [expandedThreads, setExpandedThreads] = useState({}); // { [annotationId]: true }
+
+  const COLLAPSE_THRESHOLD = 100; // chars – threads with text shorter than this AND 0 replies show fully
+  const isLongThread = (ann) => (ann.text?.length || 0) > COLLAPSE_THRESHOLD || (ann.replies?.length || 0) > 0;
+  const isExpanded = (ann) => expandedThreads[ann.id] || !isLongThread(ann);
+  const toggleExpanded = (id) => setExpandedThreads(prev => ({ ...prev, [id]: !prev[id] }));
 
   const open = annotations.filter(a => !a.resolved);
   const resolved = annotations.filter(a => a.resolved);
@@ -154,16 +160,26 @@ export default function FormAnnotationsPanel({
             </div>
           )}
 
-          {displayed.map((ann) => (
-            <div key={ann.id} className={`fap-thread ${ann.resolved ? 'fap-thread-resolved' : ''}`}>
+          {displayed.map((ann) => {
+            const expanded = isExpanded(ann);
+            const long = isLongThread(ann);
+            const replyCount = ann.replies?.length || 0;
+
+            return (
+            <div
+              key={ann.id}
+              className={`fap-thread ${ann.resolved ? 'fap-thread-resolved' : ''} ${!expanded ? 'fap-thread-collapsed' : ''}`}
+              onClick={() => { if (!expanded) toggleExpanded(ann.id); }}
+            >
               {/* Thread location */}
               <div
                 className="fap-thread-target fap-thread-target-clickable"
-                onClick={() => {
-                  // Scroll to the field in the form
+                onClick={(e) => {
+                  e.stopPropagation();
                   const fieldId = ann.highlightFieldId || ann.targetId;
                   const el = document.querySelector(`[data-field-id="${fieldId}"]`);
                   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  if (!expanded) toggleExpanded(ann.id);
                 }}
                 title="Click to scroll to field"
               >
@@ -175,6 +191,14 @@ export default function FormAnnotationsPanel({
                 <span className="fap-target-type">
                   {ann.targetType === 'section' ? 'section' : ann.targetType === 'highlight' ? 'highlight' : 'field'}
                 </span>
+                {long && (
+                  <span className={`fap-expand-indicator ${expanded ? 'expanded' : ''}`}>
+                    {expanded ? '▾' : '▸'}
+                    {!expanded && replyCount > 0 && (
+                      <span className="fap-reply-count">{replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
+                    )}
+                  </span>
+                )}
               </div>
 
               {/* Highlighted text snippet */}
@@ -184,7 +208,7 @@ export default function FormAnnotationsPanel({
                 </div>
               )}
 
-              {/* Root message */}
+              {/* Root message — always visible but truncated when collapsed */}
               <div className="fap-message">
                 <Avatar name={ann.authorName} role={ann.authorRole} />
                 <div className="fap-message-body">
@@ -196,72 +220,92 @@ export default function FormAnnotationsPanel({
                     </span>
                     <span className="fap-message-time">{timeSince(ann.createdAt)}</span>
                   </div>
-                  <div className="fap-message-text">{ann.text}</div>
+                  <div className={`fap-message-text ${!expanded ? 'fap-message-text-collapsed' : ''}`}>
+                    {ann.text}
+                  </div>
+                  {!expanded && long && (
+                    <button className="fap-expand-btn" onClick={(e) => { e.stopPropagation(); toggleExpanded(ann.id); }}>
+                      Show more{replyCount > 0 ? ` + ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : ''}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Replies */}
-              {ann.replies?.map((r) => (
-                <div key={r.id} className="fap-message fap-message-reply">
-                  <Avatar name={r.authorName} role={r.authorRole} size={22} />
-                  <div className="fap-message-body">
-                    <div className="fap-message-meta">
-                      <span className="fap-message-author">{r.authorName}</span>
-                      <span className="fap-message-role"
-                        style={{ background: (ROLE_COLORS[r.authorRole] || 'var(--uwc-navy)') + '18', color: ROLE_COLORS[r.authorRole] || 'var(--uwc-navy)' }}>
-                        {ROLE_LABELS[r.authorRole] || r.authorRole}
-                      </span>
-                      <span className="fap-message-time">{timeSince(r.createdAt)}</span>
+              {/* Expanded content: replies, reply input, actions */}
+              {expanded && (
+                <>
+                  {/* Replies */}
+                  {ann.replies?.map((r) => (
+                    <div key={r.id} className="fap-message fap-message-reply">
+                      <Avatar name={r.authorName} role={r.authorRole} size={22} />
+                      <div className="fap-message-body">
+                        <div className="fap-message-meta">
+                          <span className="fap-message-author">{r.authorName}</span>
+                          <span className="fap-message-role"
+                            style={{ background: (ROLE_COLORS[r.authorRole] || 'var(--uwc-navy)') + '18', color: ROLE_COLORS[r.authorRole] || 'var(--uwc-navy)' }}>
+                            {ROLE_LABELS[r.authorRole] || r.authorRole}
+                          </span>
+                          <span className="fap-message-time">{timeSince(r.createdAt)}</span>
+                        </div>
+                        <div className="fap-message-text">{r.text}</div>
+                      </div>
                     </div>
-                    <div className="fap-message-text">{r.text}</div>
-                  </div>
-                </div>
-              ))}
+                  ))}
 
-              {/* Reply input — shown if thread is open */}
-              {!ann.resolved && (
-                <div className="fap-reply-input">
-                  <Avatar name={currentUser?.name} role={currentUser?.role} size={22} />
-                  <input
-                    className="fap-reply-text"
-                    placeholder="Reply…"
-                    value={replyTexts[ann.id] || ''}
-                    onChange={(e) => setReplyTexts(prev => ({ ...prev, [ann.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(ann.id); }
-                    }}
-                  />
-                  <button
-                    className="fap-reply-send"
-                    onClick={() => handleReply(ann.id)}
-                    disabled={!replyTexts[ann.id]?.trim() || submitting === ann.id}
-                  >
-                    <HiOutlinePaperAirplane />
-                  </button>
-                </div>
-              )}
+                  {/* Reply input — shown if thread is open */}
+                  {!ann.resolved && (
+                    <div className="fap-reply-input">
+                      <Avatar name={currentUser?.name} role={currentUser?.role} size={22} />
+                      <input
+                        className="fap-reply-text"
+                        placeholder="Reply…"
+                        value={replyTexts[ann.id] || ''}
+                        onChange={(e) => setReplyTexts(prev => ({ ...prev, [ann.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(ann.id); }
+                        }}
+                      />
+                      <button
+                        className="fap-reply-send"
+                        onClick={() => handleReply(ann.id)}
+                        disabled={!replyTexts[ann.id]?.trim() || submitting === ann.id}
+                      >
+                        <HiOutlinePaperAirplane />
+                      </button>
+                    </div>
+                  )}
 
-              {/* Resolve / Reopen */}
-              {canResolve && (
-                <div className="fap-thread-actions">
-                  {!ann.resolved ? (
-                    <button className="fap-action-btn fap-action-resolve" onClick={() => onResolve?.(ann.id)}>
-                      <HiOutlineCheckCircle /> Mark resolved
-                    </button>
-                  ) : (
-                    <button className="fap-action-btn fap-action-reopen" onClick={() => onReopen?.(ann.id)}>
-                      <HiOutlineArrowUturnLeft /> Reopen
+                  {/* Resolve / Reopen */}
+                  {canResolve && (
+                    <div className="fap-thread-actions">
+                      {!ann.resolved ? (
+                        <button className="fap-action-btn fap-action-resolve" onClick={() => onResolve?.(ann.id)}>
+                          <HiOutlineCheckCircle /> Mark resolved
+                        </button>
+                      ) : (
+                        <button className="fap-action-btn fap-action-reopen" onClick={() => onReopen?.(ann.id)}>
+                          <HiOutlineArrowUturnLeft /> Reopen
+                        </button>
+                      )}
+                      {ann.resolved && ann.resolvedBy && (
+                        <span className="fap-resolved-note">
+                          <HiOutlineLockClosed /> Resolved
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Collapse button at bottom */}
+                  {long && (
+                    <button className="fap-collapse-btn" onClick={(e) => { e.stopPropagation(); toggleExpanded(ann.id); }}>
+                      Show less
                     </button>
                   )}
-                  {ann.resolved && ann.resolvedBy && (
-                    <span className="fap-resolved-note">
-                      <HiOutlineLockClosed /> Resolved
-                    </span>
-                  )}
-                </div>
+                </>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </aside>
     </div>

@@ -770,6 +770,79 @@
   background: rgba(0,0,0,0.03);
 }
 
+/* ── Collapsible thread cards ── */
+.fap-thread-collapsed {
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.fap-thread-collapsed:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--uwc-navy-light, var(--border-default));
+}
+
+/* Truncated message text */
+.fap-message-text-collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 2.95em; /* ~2 lines at line-height 1.5 */
+}
+
+/* "Show more" / "Show less" buttons */
+.fap-expand-btn {
+  background: none;
+  border: none;
+  color: var(--uwc-navy);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+.fap-expand-btn:hover {
+  text-decoration: underline;
+}
+.fap-collapse-btn {
+  display: block;
+  width: 100%;
+  background: var(--bg-muted);
+  border: none;
+  border-top: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s, color 0.12s;
+}
+.fap-collapse-btn:hover {
+  background: var(--bg-secondary, #eee);
+  color: var(--uwc-navy);
+}
+
+/* Expand indicator arrow + reply count */
+.fap-expand-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.fap-expand-indicator.expanded {
+  color: var(--text-secondary);
+}
+.fap-reply-count {
+  font-size: 10px;
+  color: var(--uwc-navy);
+  font-weight: 600;
+}
+
 /* Threads container */
 .fat-threads-container {
   animation: fatSlideIn 0.15s ease;
