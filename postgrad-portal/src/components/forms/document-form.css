@@ -307,11 +307,14 @@
 .document-form-actions {
   padding: 24px 32px;
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  border-top: 1px solid var(--border-light, #e8ebf0);
   background: var(--bg-subtle, #f8f9fb);
   border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+}
+
+/* Dark mode: document form actions */
+[data-theme="dark"] .document-form-actions {
+  background: var(--bg-surface, #1a1d27);
+  border-top: 1px solid var(--border-strong, #454a5e);
 }
 
 /* ── Form Field Styling ── */
@@ -397,6 +400,13 @@
   color: var(--text-secondary, #5a6376);
 }
 
+/* Dark mode: auto-populated fields */
+[data-theme="dark"] .form-field-auto-populated .form-input {
+  background: var(--bg-secondary, #252830);
+  color: var(--text-tertiary, #6b7280);
+  border-color: var(--border-strong, #454a5e);
+}
+
 /* Checkbox */
 .form-checkbox-wrapper {
   display: flex;
@@ -466,6 +476,28 @@
   border: 1px dashed var(--border-default, #dde1e8);
   border-radius: var(--radius-md, 8px);
   background: var(--bg-subtle, #f8f9fb);
+}
+
+/* Dark mode: signature block */
+[data-theme="dark"] .signature-block {
+  background: var(--bg-secondary, #252830);
+  border-color: var(--border-strong, #454a5e);
+}
+[data-theme="dark"] .signature-block-label {
+  color: var(--text-tertiary, #6b7280);
+}
+[data-theme="dark"] .signature-block-signed {
+  background: var(--status-success-bg, #152e25);
+  border-color: var(--status-success, #10b981);
+}
+[data-theme="dark"] .signature-block-signed .sig-name {
+  color: var(--text-primary, #e8eaf0);
+}
+[data-theme="dark"] .signature-block-signed .sig-date {
+  color: var(--text-tertiary, #6b7280);
+}
+[data-theme="dark"] .signature-block-signed .sig-preview {
+  color: var(--uwc-navy-light, #3b7ec9);
 }
 
 .signature-block-label {
