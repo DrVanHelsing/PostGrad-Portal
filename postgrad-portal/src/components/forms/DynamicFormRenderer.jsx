@@ -81,8 +81,8 @@ export default function DynamicFormRenderer({
     (type, id) => getAnnotationsForTarget(type, id).filter(a => !a.resolved).length,
     [getAnnotationsForTarget],
   );
-  const canAnnotate = reviewMode && ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(currentUserRole);
-  const canResolve  = canAnnotate;
+  const canAnnotate = reviewMode; // all authenticated users can leave comments
+  const canResolve  = reviewMode && ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(currentUserRole);
 
   /* ── Resolve auto-populated values on mount ── */
   useEffect(() => {
@@ -121,6 +121,16 @@ export default function DynamicFormRenderer({
     const done = visibleSections.filter((s) => sectionStatuses[s.id] === 'completed').length;
     return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
   }, [visibleSections, sectionStatuses]);
+
+  /* ── Submit availability: only require the current role's own sections ── */
+  const canSubmit = useMemo(() => {
+    if (readOnly) return false;
+    const mySections = visibleSections.filter(
+      (s) => s.assignedRole === currentUserRole || currentUserRole === 'admin',
+    );
+    if (mySections.length === 0) return false;
+    return mySections.every((s) => sectionStatuses[s.id] === 'completed');
+  }, [visibleSections, currentUserRole, sectionStatuses, readOnly]);
 
   if (!template) return null;
 
@@ -410,7 +420,8 @@ export default function DynamicFormRenderer({
           <button
             className="btn btn-primary"
             onClick={onSubmit}
-            disabled={progress.percent < 100}
+            disabled={!canSubmit}
+            title={!canSubmit ? 'Complete all your assigned sections before submitting' : undefined}
           >
             <HiOutlinePaperAirplane /> Submit Form
           </button>
@@ -580,7 +591,14 @@ function resolveAutoPopulate(config, currentUser, studentProfile) {
     return '';
   }
   if (source === 'user' && currentUser) {
-    if (field === 'name') return `${currentUser.firstName || ''} ${currentUser.surname || currentUser.lastName || ''}`.trim();
+    // Split full name as fallback when firstName / surname not stored separately
+    const nameParts = (currentUser.name || '').trim().split(/\s+/);
+    const derivedFirst = nameParts[0] || '';
+    const derivedSurname = nameParts.slice(1).join(' ') || '';
+
+    if (field === 'name') return currentUser.name || `${currentUser.firstName || ''} ${currentUser.surname || currentUser.lastName || ''}`.trim();
+    if (field === 'firstName') return currentUser.firstName || derivedFirst;
+    if (field === 'surname' || field === 'lastName') return currentUser.surname || currentUser.lastName || derivedSurname;
     return currentUser[field] || '';
   }
   if (source === 'studentProfile' && studentProfile) {

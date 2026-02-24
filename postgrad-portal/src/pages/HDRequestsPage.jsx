@@ -115,7 +115,6 @@ export default function HDRequestsPage() {
   const [previewAnnotations, setPreviewAnnotations] = useState([]);
   const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
   const annotationUnsubRef = useRef(null);
-  const [formFullscreen, setFormFullscreen] = useState(false);
   const [formRequiredAttachments, setFormRequiredAttachments] = useState({});
 
   /* ── UserPicker state (for supervisor/coordinator selection) ── */
@@ -150,7 +149,7 @@ export default function HDRequestsPage() {
   }, [showFormPreview, previewFormSubmission?.id]);
 
   /* ── Annotation permission helper ── */
-  const canAnnotate = ['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(user.role);
+  const canAnnotate = true; // all roles can leave comments; canResolve is controlled in DynamicFormRenderer
 
   /* ── Annotation handlers ── */
   const handleAddAnnotation = useCallback(async (targetType, targetId, targetLabel, text) => {
@@ -908,6 +907,7 @@ export default function HDRequestsPage() {
         }}
         title="Submitted Form Preview"
         large
+        fullscreen
       >
         {previewFormTemplate && (
           <>
@@ -988,11 +988,10 @@ export default function HDRequestsPage() {
       {/* ── Form Fill Modal ── */}
       <Modal
         isOpen={!!activeFormTemplate}
-        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setFormFullscreen(false); setSelectedSupervisor(null); setSelectedCoordinator(null); setFormRequiredAttachments({}); }}
+        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setSelectedSupervisor(null); setSelectedCoordinator(null); setFormRequiredAttachments({}); }}
         title={activeFormTemplate?.layout?.header?.formTitle || activeFormTemplate?.name || 'Form'}
         large
-        fullscreen={formFullscreen}
-        onToggleFullscreen={() => setFormFullscreen(f => !f)}
+        fullscreen
       >
         {activeFormTemplate && (
           <>
