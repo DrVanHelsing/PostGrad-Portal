@@ -40,6 +40,7 @@ import './FormAnnotations.css';
  * @param {Object}   validationErrors  – { [fieldId]: 'message', ... }
  * @param {boolean}  reviewMode        – enable inline annotation controls
  * @param {Array}    annotations       – flat array of annotation objects for this submission
+ * @param {string}   annotationFilter  – 'all' | 'open' | 'resolved'
  * @param {Function} onAddAnnotation   – (targetType, targetId, targetLabel, text, extra) => void
  * @param {Function} onReplyAnnotation – (annotationId, text) => void
  * @param {Function} onResolveAnnotation – (annotationId) => void
@@ -65,6 +66,7 @@ export default function DynamicFormRenderer({
   validationErrors = {},
   reviewMode = false,
   annotations = [],
+  annotationFilter = 'all',
   onAddAnnotation,
   onReplyAnnotation,
   onResolveAnnotation,
@@ -79,21 +81,27 @@ export default function DynamicFormRenderer({
   const [highlightSelection, setHighlightSelection] = useState(null); // { fieldId, fieldLabel, text } | null
   const formRef = useRef(null);
 
+  const filteredAnnotations = useMemo(() => {
+    if (annotationFilter === 'open') return annotations.filter((a) => !a.resolved);
+    if (annotationFilter === 'resolved') return annotations.filter((a) => a.resolved);
+    return annotations;
+  }, [annotations, annotationFilter]);
+
   /* ── Annotation helpers ── */
   const getAnnotationsForTarget = useCallback(
-    (type, id) => annotations.filter(a => a.targetType === type && a.targetId === id),
-    [annotations],
+    (type, id) => filteredAnnotations.filter(a => a.targetType === type && a.targetId === id),
+    [filteredAnnotations],
   );
   const getHighlightAnnotationsForField = useCallback(
-    (fieldId) => annotations.filter(a => a.targetType === 'highlight' && a.highlightFieldId === fieldId),
-    [annotations],
+    (fieldId) => filteredAnnotations.filter(a => a.targetType === 'highlight' && a.highlightFieldId === fieldId),
+    [filteredAnnotations],
   );
   const getAllAnnotationsForField = useCallback(
-    (fieldId) => annotations.filter(
+    (fieldId) => filteredAnnotations.filter(
       a => (a.targetType === 'field' && a.targetId === fieldId)
         || (a.targetType === 'highlight' && a.highlightFieldId === fieldId)
     ),
-    [annotations],
+    [filteredAnnotations],
   );
   const getUnresolvedCount = useCallback(
     (type, id) => getAnnotationsForTarget(type, id).filter(a => !a.resolved).length,

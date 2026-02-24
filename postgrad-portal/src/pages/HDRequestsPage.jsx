@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Card, CardHeader, CardBody, StatusBadge, EmptyState, Modal } from '../components/common';
-import { DynamicFormRenderer, FormAnnotationsPanel } from '../components/forms';
+import { DynamicFormRenderer } from '../components/forms';
 import SignaturePad from '../components/common/SignaturePad';
 import { STATUS_CONFIG, REQUEST_TYPE_LABELS, FORM_TYPE_LABELS, FORMS_REQUIRING_ATTACHMENTS } from '../utils/constants';
 import { formatDate, formatRelativeTime } from '../utils/helpers';
@@ -41,7 +41,6 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlinePencilSquare,
   HiOutlineExclamationTriangle,
-  HiOutlineChatBubbleLeftRight,
 } from 'react-icons/hi2';
 import './HDRequestsPage.css';
 
@@ -113,13 +112,13 @@ export default function HDRequestsPage() {
   const [previewFormData, setPreviewFormData] = useState({});
   const [previewFormSubmission, setPreviewFormSubmission] = useState(null);
   const [previewAnnotations, setPreviewAnnotations] = useState([]);
-  const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
+  const [previewAnnotationFilter, setPreviewAnnotationFilter] = useState('all');
   const annotationUnsubRef = useRef(null);
   const [formRequiredAttachments, setFormRequiredAttachments] = useState({});
 
   /* ── Form Fill annotation state (mirrors preview annotation state) ── */
   const [formFillAnnotations, setFormFillAnnotations] = useState([]);
-  const [showFormFillAnnotationsPanel, setShowFormFillAnnotationsPanel] = useState(false);
+  const [formFillAnnotationFilter, setFormFillAnnotationFilter] = useState('all');
   const formFillAnnotationUnsubRef = useRef(null);
 
   /* ── UserPicker state (for supervisor/coordinator selection) ── */
@@ -926,7 +925,7 @@ export default function HDRequestsPage() {
         isOpen={showFormPreview && !!previewFormTemplate}
         onClose={() => {
           setShowFormPreview(false); setPreviewFormTemplate(null); setPreviewFormData({});
-          setPreviewFormSubmission(null); setPreviewAnnotations([]); setShowAnnotationsPanel(false);
+          setPreviewFormSubmission(null); setPreviewAnnotations([]); setPreviewAnnotationFilter('all');
         }}
         title="Submitted Form Preview"
         large
@@ -934,24 +933,26 @@ export default function HDRequestsPage() {
       >
         {previewFormTemplate && (
           <>
-            {/* ── Annotation toolbar (only when a real submission is linked) ── */}
+            {/* ── Annotation filters (inline on form) ── */}
             {previewFormSubmission && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
                 <button
-                  className={`btn btn-sm ${showAnnotationsPanel ? 'btn-primary' : 'btn-outline'}`}
-                  onClick={() => setShowAnnotationsPanel(p => !p)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  className={`btn btn-sm ${previewAnnotationFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setPreviewAnnotationFilter('all')}
                 >
-                  <HiOutlineChatBubbleLeftRight />
-                  Comments
-                  {previewAnnotations.filter(a => !a.resolved).length > 0 && (
-                    <span style={{
-                      background: 'var(--status-warning)', color: '#fff',
-                      borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700,
-                    }}>
-                      {previewAnnotations.filter(a => !a.resolved).length}
-                    </span>
-                  )}
+                  All ({previewAnnotations.length})
+                </button>
+                <button
+                  className={`btn btn-sm ${previewAnnotationFilter === 'open' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setPreviewAnnotationFilter('open')}
+                >
+                  Open ({previewAnnotations.filter(a => !a.resolved).length})
+                </button>
+                <button
+                  className={`btn btn-sm ${previewAnnotationFilter === 'resolved' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setPreviewAnnotationFilter('resolved')}
+                >
+                  Resolved ({previewAnnotations.filter(a => a.resolved).length})
                 </button>
               </div>
             )}
@@ -965,26 +966,12 @@ export default function HDRequestsPage() {
               currentUser={user}
               reviewMode={canAnnotate && !!previewFormSubmission}
               annotations={previewAnnotations}
+              annotationFilter={previewAnnotationFilter}
               onAddAnnotation={handleAddAnnotation}
               onReplyAnnotation={handleReplyAnnotation}
               onResolveAnnotation={handleResolveAnnotation}
               onReopenAnnotation={handleReopenAnnotation}
             />
-
-            {showAnnotationsPanel && previewFormSubmission && (
-              <FormAnnotationsPanel
-                isOpen={showAnnotationsPanel}
-                onClose={() => setShowAnnotationsPanel(false)}
-                annotations={previewAnnotations}
-                currentUser={user}
-                canAnnotate={canAnnotate}
-                canResolve={canAnnotate}
-                onReply={handleReplyAnnotation}
-                onResolve={handleResolveAnnotation}
-                onReopen={handleReopenAnnotation}
-                formTitle={previewFormTemplate?.name || 'Form'}
-              />
-            )}
           </>
         )}
       </Modal>
@@ -1011,26 +998,42 @@ export default function HDRequestsPage() {
       {/* ── Form Fill Modal ── */}
       <Modal
         isOpen={!!activeFormTemplate}
-        onClose={() => { setActiveFormTemplate(null); setActiveFormSubmission(null); setSelectedSupervisor(null); setSelectedCoordinator(null); setFormRequiredAttachments({}); }}
+        onClose={() => {
+          setActiveFormTemplate(null);
+          setActiveFormSubmission(null);
+          setSelectedSupervisor(null);
+          setSelectedCoordinator(null);
+          setFormRequiredAttachments({});
+          setFormFillAnnotationFilter('all');
+        }}
         title={activeFormTemplate?.layout?.header?.formTitle || activeFormTemplate?.name || 'Form'}
         large
         fullscreen
       >
         {activeFormTemplate && (
           <>
-            {/* ── Annotation toolbar for Form Fill ── */}
+            {/* ── Annotation filters for Form Fill ── */}
             <div className="form-annotation-toolbar" style={{
               display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 'var(--space-sm)',
               padding: '0 var(--space-sm)',
             }}>
               <button
-                className={`btn btn-outline btn-sm ${formFillAnnotations.filter(a => !a.resolved).length > 0 ? 'btn-outline-warning' : ''}`}
-                onClick={() => setShowFormFillAnnotationsPanel(true)}
+                className={`btn btn-sm ${formFillAnnotationFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setFormFillAnnotationFilter('all')}
               >
-                <HiOutlineChatBubbleLeftRight />
-                {formFillAnnotations.length > 0
-                  ? `Comments (${formFillAnnotations.filter(a => !a.resolved).length} open)`
-                  : 'Comments'}
+                All ({formFillAnnotations.length})
+              </button>
+              <button
+                className={`btn btn-sm ${formFillAnnotationFilter === 'open' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setFormFillAnnotationFilter('open')}
+              >
+                Open ({formFillAnnotations.filter(a => !a.resolved).length})
+              </button>
+              <button
+                className={`btn btn-sm ${formFillAnnotationFilter === 'resolved' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setFormFillAnnotationFilter('resolved')}
+              >
+                Resolved ({formFillAnnotations.filter(a => a.resolved).length})
               </button>
             </div>
 
@@ -1217,24 +1220,11 @@ export default function HDRequestsPage() {
             validationErrors={formValidationErrors}
             reviewMode={true}
             annotations={formFillAnnotations}
+            annotationFilter={formFillAnnotationFilter}
             onAddAnnotation={handleAddAnnotation}
             onReplyAnnotation={handleReplyAnnotation}
             onResolveAnnotation={handleResolveAnnotation}
             onReopenAnnotation={handleReopenAnnotation}
-          />
-
-          {/* Form Fill Annotations Panel (sidebar) */}
-          <FormAnnotationsPanel
-            isOpen={showFormFillAnnotationsPanel}
-            onClose={() => setShowFormFillAnnotationsPanel(false)}
-            annotations={formFillAnnotations}
-            currentUser={user}
-            canAnnotate={canAnnotate}
-            canResolve={['supervisor', 'co_supervisor', 'coordinator', 'admin'].includes(user.role)}
-            onReply={handleReplyAnnotation}
-            onResolve={handleResolveAnnotation}
-            onReopen={handleReopenAnnotation}
-            formTitle={activeFormTemplate?.name || 'Form'}
           />
           </>
         )}
