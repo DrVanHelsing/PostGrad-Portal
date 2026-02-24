@@ -409,8 +409,12 @@ export default function FormBuilderPage() {
       {/* \u2500\u2500 Loading Overlay \u2500\u2500 */}
       {pageLoading && (
         <div className="fb-loading-overlay">
+          <div className="fb-loading-brand">
+            <HiOutlineRectangleGroup className="fb-loading-icon" />
+            <span className="fb-loading-title">Form Builder</span>
+          </div>
           <div className="fb-loading-spinner" />
-          <span>Loading Form Builder\u2026</span>
+          <span className="fb-loading-subtitle">{'Initialising workspace\u2026'}</span>
         </div>
       )}
 
@@ -418,7 +422,7 @@ export default function FormBuilderPage() {
       {saveLoading && (
         <div className="fb-loading-overlay">
           <div className="fb-loading-spinner" />
-          <span>Saving changes\u2026</span>
+          <span className="fb-loading-subtitle">{'Saving changes\u2026'}</span>
         </div>
       )}
       {/* ── Top Toolbar ── */}

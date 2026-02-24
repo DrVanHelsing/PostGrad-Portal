@@ -282,15 +282,17 @@ export default function SubmissionsPage() {
       </div>
 
       {/* ── Type Filter Chips ── */}
-      <div className="sub-type-filters">
-        <button className={`sub-type-chip ${typeFilter === 'all' ? 'active' : ''}`} onClick={() => setTypeFilter('all')}>
-          All Types <span className="sub-chip-count">{allUnfiltered.length}</span>
-        </button>
-        {Object.entries(SUBMISSION_TYPES).filter(([key]) => typeCounts[key] > 0).map(([key, cfg]) => (
-          <button key={key} className={`sub-type-chip ${typeFilter === key ? 'active' : ''}`} onClick={() => setTypeFilter(key)}>
-            {cfg.icon} {cfg.label} <span className="sub-chip-count">{typeCounts[key]}</span>
+      <div className="sub-type-filter-bar">
+        <div className="sub-type-filters">
+          <button className={`sub-type-chip ${typeFilter === 'all' ? 'active' : ''}`} onClick={() => setTypeFilter('all')}>
+            All Types <span className="sub-chip-count">{allUnfiltered.length}</span>
           </button>
-        ))}
+          {Object.entries(SUBMISSION_TYPES).filter(([key]) => typeCounts[key] > 0).map(([key, cfg]) => (
+            <button key={key} className={`sub-type-chip ${typeFilter === key ? 'active' : ''}`} onClick={() => setTypeFilter(key)}>
+              {cfg.icon} {cfg.label} <span className="sub-chip-count">{typeCounts[key]}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Submissions Table ── */}

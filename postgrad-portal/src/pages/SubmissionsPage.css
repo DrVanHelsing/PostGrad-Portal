@@ -73,17 +73,21 @@
 }
 
 /* ── Type Filter Chips ── */
+.sub-type-filter-bar {
+  margin-bottom: var(--space-md);
+}
 .sub-type-filters {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  margin-bottom: var(--space-md);
+  padding: 2px 0;
 }
 .sub-type-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   font-size: 0.8rem;
   font-weight: 600;
@@ -93,6 +97,7 @@
   cursor: pointer;
   box-shadow: var(--shadow-xs);
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 .sub-type-chip:hover {
   border-color: var(--uwc-navy);
@@ -106,9 +111,18 @@
   box-shadow: var(--shadow-sm);
 }
 .sub-chip-count {
-  font-size: 0.72rem;
-  margin-left: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
   opacity: 0.85;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 1px 6px;
+  border-radius: 20px;
+  min-width: 20px;
+  text-align: center;
+}
+.sub-type-chip:not(.active) .sub-chip-count {
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
 }
 
 /* ── Table ── */

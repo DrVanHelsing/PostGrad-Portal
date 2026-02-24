@@ -293,6 +293,38 @@ const VIEW_FORM_TOUR = {
     { title: 'That\'s It!', content: 'The form viewer shows every section of the form with all data filled in (if submitted). Fields appear greyed-out to indicate read-only status. This provides full transparency across all roles.', tooltipPosition: 'center' },
   ],
 };
+const SUBMIT_DOCUMENT_TOUR = {
+  id: 'submit-document',
+  title: 'Submit a Document for Review',
+  description: 'How to submit thesis chapters, proposals, and other academic documents to your supervisor.',
+  category: 'requests',
+  roles: ['student'],
+  steps: [
+    { title: 'The My Submissions Page', content: 'The Submissions page is where you upload thesis chapters, research proposals, and other academic documents for supervisor feedback — separate from formal HD requests.', tooltipPosition: 'center' },
+    { selector: '.sidebar-link[href="/submissions"]', route: null, title: 'Navigate to My Submissions', content: 'Click "My Submissions" in the sidebar to open the page.', tooltipPosition: 'right', clickToProceed: true },
+    { selector: '.page-header', route: '/submissions', title: 'Submissions List', content: 'This page lists all your document submissions. You can filter by type, status, or search by title. Click on any row to see its full detail and feedback.', tooltipPosition: 'bottom' },
+    { title: 'Creating a Submission', content: 'Click <strong>"New Submission"</strong> at the top right. A wizard will open where you:\n\n1. <strong>Select a type</strong> — Draft Chapter, Research Proposal, Literature Review, etc.\n2. <strong>Enter a title</strong> that clearly identifies this document\n3. Add an <strong>optional note</strong> for your supervisor\n4. <strong>Upload your file</strong> (PDF or Word)', tooltipPosition: 'center' },
+    { title: 'After Submission', content: 'Once submitted, your supervisor receives a notification and can begin reviewing. They can add annotations directly on the PDF and provide formal feedback.\n\nYou\'ll receive a notification when feedback is available. You can <strong>submit a new version</strong> at any time from the submission detail view.', tooltipPosition: 'center' },
+  ],
+};
+
+const USE_FORM_BUILDER_TOUR = {
+  id: 'use-form-builder',
+  title: 'Using the Form Builder',
+  description: 'How to create, configure, and publish dynamic HD request form templates.',
+  category: 'admin',
+  roles: ['admin'],
+  steps: [
+    { title: 'Form Builder Overview', content: 'The Form Builder lets you create and manage form templates for HD request types. Each template can have multiple role-assigned sections with fully configurable fields.', tooltipPosition: 'center' },
+    { selector: '.sidebar-link[href="/form-builder"]', route: null, title: 'Open Form Builder', content: 'Navigate to the Form Builder from the sidebar.', tooltipPosition: 'right', clickToProceed: true },
+    { selector: '.fb-toolbar', route: '/form-builder', title: 'Full-Screen Editor', content: 'The Form Builder opens in full-screen mode. Select a template from the left panel to start editing, or click "New Template" to create one from scratch.', tooltipPosition: 'bottom' },
+    { title: 'Three-Panel Layout', content: 'The editor has three panels:\n\n• <strong>Left</strong> — template list and field type palette\n• <strong>Centre</strong> — form canvas with sections and fields\n• <strong>Right</strong> — field configuration (appears when a field is selected)', tooltipPosition: 'center' },
+    { title: 'Building a Template', content: '1. Click <strong>"New Template"</strong> and name it\n2. Add sections with the <strong>"Add Section"</strong> button\n3. Assign each section to its responsible role (Student, Supervisor, etc.)\n4. Drag or click field types from the left palette\n5. Click any field to configure it in the right panel', tooltipPosition: 'center' },
+    { title: 'Preview and Publish', content: '1. Click <strong>Preview</strong> to see how the form looks for each role\n2. Use the role switcher to check all perspectives\n3. Click <strong>Save</strong> to store as a draft\n4. Click <strong>Publish</strong> to make it immediately available for new HD requests', tooltipPosition: 'center' },
+  ],
+};
+
+
 
 /* ════════════════════════════════════════
    EXPORT ALL TOURS
@@ -317,6 +349,8 @@ export const ALL_TOURS = [
   VIEW_ANALYTICS_TOUR,
   CSV_IMPORT_TOUR,
   VIEW_FORM_TOUR,
+  SUBMIT_DOCUMENT_TOUR,
+  USE_FORM_BUILDER_TOUR,
 ];
 
 /** Get tours available for a specific role */

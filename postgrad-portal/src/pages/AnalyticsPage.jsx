@@ -87,21 +87,21 @@ export default function AnalyticsPage() {
 
       {/* Summary cards */}
       <div className="stats-grid">
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--uwc-navy)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--uwc-navy)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Total Requests</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--uwc-navy)' }}>{mockHDRequests.length}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--uwc-navy)' }}>{mockHDRequests.length}</div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-success)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-success)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Approved</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-success)' }}>{mockHDRequests.filter(r => r.status === 'approved').length}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-success)' }}>{mockHDRequests.filter(r => r.status === 'approved').length}</div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-warning)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-warning)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Avg Processing</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-warning)' }}>{avgProcessingDays} <span style={{ fontSize: 14, fontWeight: 500 }}>days</span></div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-warning)' }}>{avgProcessingDays} <span style={{ fontSize: 14, fontWeight: 500 }}>days</span></div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-info)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-info)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Active Students</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-info)' }}>{mockStudentProfiles.filter(s => s.status === 'active').length}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-info)' }}>{mockStudentProfiles.filter(s => s.status === 'active').length}</div>
         </div>
       </div>
 

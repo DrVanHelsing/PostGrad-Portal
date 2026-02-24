@@ -93,85 +93,101 @@ export default function AdminDashboard() {
         <StatCard label="Students" value={mockStudentProfiles.length} icon={<HiOutlineAcademicCap />} color="var(--status-purple)" bg="var(--status-purple-bg)" />
       </div>
 
-      <div className="content-grid">
-        {/* Requests by Status - visual bar chart */}
-        <Card>
-          <CardHeader title="Requests by Status" icon={<HiOutlineChartBar />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/analytics')}>Analytics <HiOutlineArrowRight /></button>} />
-          <CardBody>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {Object.entries(requestsByStatus).map(([key, items]) => {
-                const cfg = STATUS_CONFIG[key];
-                const pct = (items.length / maxCount) * 100;
-                return (
-                  <div key={key}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <StatusBadge status={key} />
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{items.length}</span>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 320px',
+        gridTemplateRows: 'auto auto',
+        gap: 'var(--space-xl)',
+        alignItems: 'start',
+      }}>
+        {/* Col 1 Row 1 — Requests by Status */}
+        <div style={{ gridColumn: '1', gridRow: '1' }}>
+          <Card>
+            <CardHeader title="Requests by Status" icon={<HiOutlineChartBar />} iconBg="var(--status-info-bg)" iconColor="var(--status-info)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/analytics')}>Analytics <HiOutlineArrowRight /></button>} />
+            <CardBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Object.entries(requestsByStatus).map(([key, items]) => {
+                  const cfg = STATUS_CONFIG[key];
+                  const pct = (items.length / maxCount) * 100;
+                  return (
+                    <div key={key}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <StatusBadge status={key} />
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>{items.length}</span>
+                      </div>
+                      <div style={{ height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: cfg?.color || 'var(--uwc-navy)', borderRadius: 4, transition: 'width 0.3s ease' }} />
+                      </div>
                     </div>
-                    <div style={{ height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: cfg?.color || 'var(--uwc-navy)', borderRadius: 4, transition: 'width 0.3s ease' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Users by Role - moved up for better visual balance */}
-        <Card>
-          <CardHeader title="Users by Role" icon={<HiOutlineUserGroup />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/roles')}>Manage <HiOutlineArrowRight /></button>} />
-          <CardBody>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {Object.entries(groupBy(mockUsers, 'role')).map(([role, users]) => (
-                <div key={role} className="committee-stat">
-                  <span className="committee-stat-label">{ROLE_LABELS[role] || role}</span>
-                  <span className="committee-stat-value">{users.length}</span>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Request types */}
-        <Card>
-          <CardHeader title="Requests by Type" icon={<HiOutlineDocumentText />} iconBg="var(--uwc-gold-pale)" iconColor="var(--uwc-gold)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>All requests <HiOutlineArrowRight /></button>} />
-          <CardBody>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {Object.entries(requestsByType).map(([key, items]) => (
-                <div key={key} className="committee-stat">
-                  <span className="committee-stat-label">{REQUEST_TYPE_LABELS[key] || key}</span>
-                  <span className="committee-stat-value">{items.length}</span>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Recent Audit */}
-        <Card>
-          <CardHeader title="Recent Activity" icon={<HiOutlineShieldCheck />} iconBg="var(--status-teal-bg)" iconColor="var(--status-teal)"
-            action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/audit')}>Audit log <HiOutlineArrowRight /></button>} />
-          <CardBody flush>
-            {recentAudit.map((log) => (
-              <div key={log.id} className="request-list-item">
-                <div className="request-list-info">
-                  <div className="request-list-title">{log.action}</div>
-                  <div className="request-list-meta">
-                    <span>{log.userName}</span><span className="request-list-meta-sep" /><span>{log.details}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{formatDateTime(log.timestamp)}</div>
-                </div>
+                  );
+                })}
               </div>
-            ))}
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        </div>
 
-        {/* Calendar widget with admin event management + user targeting */}
-        <CalendarWidget showManage showTargetUsers />
+        {/* Col 2 Row 1 — Recent Activity */}
+        <div style={{ gridColumn: '2', gridRow: '1' }}>
+          <Card>
+            <CardHeader title="Recent Activity" icon={<HiOutlineShieldCheck />} iconBg="var(--status-teal-bg)" iconColor="var(--status-teal)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/audit')}>Audit log <HiOutlineArrowRight /></button>} />
+            <CardBody flush>
+              {recentAudit.map((log) => (
+                <div key={log.id} className="request-list-item">
+                  <div className="request-list-info">
+                    <div className="request-list-title">{log.action}</div>
+                    <div className="request-list-meta">
+                      <span>{log.userName}</span><span className="request-list-meta-sep" /><span>{log.details}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{formatDateTime(log.timestamp)}</div>
+                  </div>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Col 3 Rows 1–2 — Calendar */}
+        <div style={{ gridColumn: '3', gridRow: '1 / 3' }}>
+          <CalendarWidget showManage showTargetUsers />
+        </div>
+
+        {/* Col 1 Row 2 — Requests by Type */}
+        <div style={{ gridColumn: '1', gridRow: '2' }}>
+          <Card>
+            <CardHeader title="Requests by Type" icon={<HiOutlineDocumentText />} iconBg="var(--uwc-gold-pale)" iconColor="var(--uwc-gold)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/requests')}>All requests <HiOutlineArrowRight /></button>} />
+            <CardBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {Object.entries(requestsByType).map(([key, items]) => (
+                  <div key={key} className="committee-stat">
+                    <span className="committee-stat-label">{REQUEST_TYPE_LABELS[key] || key}</span>
+                    <span className="committee-stat-value">{items.length}</span>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Col 2 Row 2 — Users by Role */}
+        <div style={{ gridColumn: '2', gridRow: '2' }}>
+          <Card>
+            <CardHeader title="Users by Role" icon={<HiOutlineUserGroup />} iconBg="var(--status-purple-bg)" iconColor="var(--status-purple)"
+              action={<button className="btn btn-ghost btn-sm" onClick={() => navigate('/roles')}>Manage <HiOutlineArrowRight /></button>} />
+            <CardBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {Object.entries(groupBy(mockUsers, 'role')).map(([role, users]) => (
+                  <div key={role} className="committee-stat">
+                    <span className="committee-stat-label">{ROLE_LABELS[role] || role}</span>
+                    <span className="committee-stat-value">{users.length}</span>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -210,6 +210,145 @@ const FAQ_DATA = [
       },
     ],
   },
+  /* ─────────── STUDENT-SPECIFIC ─────────── */
+  {
+    category: 'My Submissions',
+    icon: <HiOutlineClipboardDocumentList />,
+    roles: ['student', 'supervisor'],
+    items: [
+      {
+        q: 'What is the My Submissions page?',
+        a: 'The **My Submissions** page is where you manage academic documents submitted for supervisor feedback — such as thesis draft chapters, research proposals, literature reviews, and methodology chapters.\n\nThis is **separate from HD Requests**: HD Requests are formal committee-approval submissions, while Submissions handle direct document review between student and supervisor.',
+      },
+      {
+        q: 'How do I submit a document for supervisor review?',
+        a: 'From **My Submissions**:\n\n1. Click **"New Submission"** in the top right\n2. Select a submission type (e.g. Draft Chapter, Research Proposal)\n3. Enter a title and optional note to your supervisor\n4. Upload your document (PDF or Word)\n5. Click **Submit**\n\nYour supervisor is notified immediately.',
+        tourLink: 'submit-document',
+      },
+      {
+        q: 'What document types can I submit?',
+        a: 'Supported submission types:\n\n• **Draft Chapter** — individual thesis chapter\n• **Full Thesis / Dissertation** — complete thesis for review\n• **Research Proposal** — initial research proposal\n• **Literature Review** — standalone review document\n• **Methodology Chapter** — research methodology section\n• **Conference Paper** — paper for conference submission\n• **Progress Report (Document)** — written progress update\n• **Data Analysis Report** — analysis findings\n• **Ethics Application** — ethics committee documentation',
+      },
+      {
+        q: 'How do I view feedback and annotations on my submission?',
+        a: 'Open the submission from **My Submissions**. Scroll to the **Feedback** section to see ratings, comments, and your supervisor\'s recommendation.\n\nFor thesis-related documents, annotations appear highlighted directly on the PDF. Click any highlighted passage to read the associated comment.',
+      },
+      {
+        q: 'Can I submit a new version after receiving feedback?',
+        a: 'Yes. Open the submission and click **"Upload New Version"**. A new version is created while all previous versions and their feedback are preserved as read-only records. Your supervisor is notified of the update.',
+      },
+    ],
+  },
+  {
+    category: 'Academic Progress',
+    icon: <HiOutlineChartBar />,
+    roles: ['student'],
+    items: [
+      {
+        q: 'What is the Academic Progress page?',
+        a: 'The **Academic Progress** page provides a personalised view of your postgraduate journey. It displays your registration history, milestone completions, programme timeline, and a summary of your submission and request activity.',
+      },
+      {
+        q: 'What milestones are tracked?',
+        a: 'Milestones represent key programme achievements recorded by your supervisor or coordinator. Common milestones include:\n\n• Programme registration\n• Research proposal approval\n• Ethics clearance\n• Data collection completion\n• Thesis submission\n• Examination entry\n\nMilestones appear in your Academic Progress timeline with dates and notes.',
+      },
+      {
+        q: 'How do I read my progress timeline?',
+        a: 'The timeline shows your key events in chronological order, colour-coded by type (requests, milestones, submissions). It helps you track how long each stage has taken and identify any delays in your programme.',
+      },
+    ],
+  },
+  /* ─────────── SUPERVISOR-SPECIFIC ─────────── */
+  {
+    category: 'Supervisor Tools',
+    icon: <HiOutlineUserGroup />,
+    roles: ['supervisor'],
+    items: [
+      {
+        q: 'What does my supervisor dashboard show?',
+        a: 'Your **Dashboard** gives an overview of:\n\n• Pending HD requests awaiting your review\n• Recent student submission activity\n• Students with no recent activity\n• Upcoming calendar events and deadlines\n• Summary of requests in each pipeline stage',
+      },
+      {
+        q: 'How is document submission review different from HD request review?',
+        a: '**HD Requests** are formal administrative submissions (registration, extension, etc.) that pass through the full committee pipeline (supervisor → coordinator → FHD → SHD).\n\n**Submissions** (My Submissions) are academic document reviews — thesis chapters, proposals, etc. These are reviewed directly between you and the student with annotations, feedback, and a recommendation, without the committee pipeline.',
+      },
+      {
+        q: "How do I review a student's submitted document?",
+        a: '1. Receive a notification when a student submits\n2. Navigate to **My Submissions** and open the submission\n3. Review the document and add **PDF annotations** (select text → click Annotate)\n4. Leave **threaded comments** in the discussion panel\n5. Submit **formal feedback** with a 5-criteria rating and recommendation\n6. Click **"Review & Send"** to dispatch all annotations at once',
+        tourLink: 'annotate-documents',
+      },
+      {
+        q: 'What is a nudge notification?',
+        a: 'A **nudge** is a gentle reminder sent to a student. If a student has been inactive, navigate to **My Students**, find the student, and send a nudge. The student receives an in-app and email reminder to take action.',
+      },
+      {
+        q: 'How do I manage all students under my supervision?',
+        a: 'Navigate to **My Students** from the sidebar. This lists all students assigned to you (primary or co-supervisor). For each student you can see their programme status, active requests, recent activity, and send nudge notifications.',
+      },
+    ],
+  },
+  /* ─────────── COORDINATOR-SPECIFIC ─────────── */
+  {
+    category: 'Programme Coordination',
+    icon: <HiOutlineShieldCheck />,
+    roles: ['coordinator'],
+    items: [
+      {
+        q: 'What tools does the coordinator dashboard provide?',
+        a: 'The coordinator dashboard shows:\n\n• Total students and active submissions across the programme\n• HD requests at each pipeline stage\n• Requests requiring coordinator action\n• Recent programme-wide activity\n• Calendar with committee meeting dates\n• Export functions for data reporting',
+      },
+      {
+        q: 'How do I record a Faculty Higher Degrees (FHD) committee decision?',
+        a: 'Navigate to the HD request and find the **Committee Decision** section. Select the FHD outcome:\n\n• **Approved** — automatically advances to SHD stage\n• **Recommended** — advances with a formal recommendation\n• **Referred Back** — returned for amendments\n\nEnter the decision date and notes. All decisions are logged in the audit trail.',
+      },
+      {
+        q: 'How do I record a Senate Higher Degrees (SHD) decision?',
+        a: 'When a request reaches the SHD stage, navigate to the request and record the SHD outcome:\n\n• **Approved** — fully approved; request archived and all stakeholders notified\n• **Referred Back** — returned for amendments\n\nFinal approval locks the record and triggers notifications.',
+      },
+      {
+        q: 'How do I manage the programme calendar?',
+        a: 'As a coordinator you can **create and manage events** via the calendar widget on the dashboard. Set the type (Deadline, Meeting, Event, Reminder), target audience, and date. All relevant users will see the event on their dashboards.',
+      },
+      {
+        q: 'Can I view all student document submissions across the programme?',
+        a: 'Yes. Navigate to **My Submissions** from the sidebar. As a coordinator you can see all document submissions across all students. Use the search, status filter, and type filter to find specific submissions.',
+      },
+    ],
+  },
+  /* ─────────── ADMIN-SPECIFIC ─────────── */
+  {
+    category: 'Form Builder',
+    icon: <HiOutlineCog6Tooth />,
+    roles: ['admin'],
+    items: [
+      {
+        q: 'What is the Form Builder?',
+        a: 'The **Form Builder** is an admin tool for creating dynamic multi-section form templates for HD request types. Each template can have multiple sections assigned to specific roles, with fully configurable field types.',
+        tourLink: 'use-form-builder',
+      },
+      {
+        q: 'How do I create a new form template?',
+        a: '1. Open **Form Builder** from the sidebar\n2. Click **"New Template"**\n3. Name the template and select the associated request type\n4. Add sections with **"Add Section"**\n5. Add field types from the left palette\n6. Assign each section to its responsible role\n7. Click **Save** — saves as a draft until published',
+        tourLink: 'use-form-builder',
+      },
+      {
+        q: 'What field types are available?',
+        a: 'Available field types:\n\n• **Text Input / Text Area** — single and multi-line text\n• **Dropdown** — select from options\n• **Date Picker / Email / Phone / Number** — typed inputs\n• **Checkbox** — boolean yes/no\n• **Auto-populated** — read-only field from system data\n• **Keywords Tags** — freeform tag entry\n• **Weighted Table** — scoring table with weights\n• **Repeater Group** — repeatable sub-field sets\n• **File Upload** — document attachment\n• **Info Text** — static instructional paragraph',
+      },
+      {
+        q: 'How do I publish a form template?',
+        a: 'Once your template is complete, click **"Publish"** in the toolbar. Published templates become immediately available for new HD requests of the associated type.\n\nYou can **archive** a template at any time to hide it from new requests while preserving existing submission data.',
+      },
+      {
+        q: 'Can I duplicate an existing template?',
+        a: 'Yes. In the template list panel, hover over any template and click the **duplicate icon**. A copy is created as a new draft with all sections and fields intact.',
+      },
+      {
+        q: 'What are prebuilt templates?',
+        a: '**Prebuilt templates** are standardised form structures pre-configured for common UWC HD request types. When creating a new template, select **"Start from Prebuilt"** to choose one. All prebuilt templates can be freely customised after import.',
+      },
+    ],
+  },
 ];
 
 /* ════════════════════════════════════════
@@ -490,6 +629,167 @@ Alice,Johnson,alice.j@uwc.ac.za,coordinator,Ms.,,
 - The import processes users **sequentially** to ensure reliable account creation
 - You can copy individual temporary passwords from the results table`,
   },
+  {
+    id: 'getting-started-coordinator',
+    title: 'Getting Started (Coordinators)',
+    icon: <HiOutlineShieldCheck />,
+    description: 'Key responsibilities, tools, and workflows for programme coordinators.',
+    roles: ['coordinator'],
+    content: `## Getting Started as a Coordinator
+
+### Your Responsibilities
+- Oversee the postgraduate programme at faculty level
+- Manage student records and supervisor assignments
+- Review HD requests at coordinator stage
+- Record Faculty (FHD) and Senate (SHD) committee decisions
+- Create and manage programme-wide calendar events and deadlines
+- Monitor audit logs for governance and compliance
+
+### Key Pages for Coordinators
+- **Dashboard** — programme-wide metrics and activity overview
+- **All Requests** — every HD request with full administrative access
+- **All Students** — complete student directory and records
+- **Progress Tracker** — visual pipeline and milestone tracking
+- **My Submissions** — all student document submissions programme-wide
+- **Audit Logs** — complete system activity trail
+- **Calendar** — create and manage events and deadlines
+
+### HD Request Workflow
+1. Requests reach Coordinator Review after all supervisor stages complete
+2. Review the request and supporting documents
+3. Prepare for Faculty Higher Degrees (FHD) Board consideration
+4. Record FHD decision: **Approved** / **Recommended** / **Referred Back**
+5. If advancing, record the Senate Higher Degrees (SHD) outcome
+6. Final SHD approval archives the request and notifies all stakeholders
+
+### Committee Decision Recording
+- Navigate to the specific HD request
+- Find the **Committee Decision** section
+- Select the outcome and record the decision date
+- All decisions are automatically logged in the audit trail
+
+### Managing the Calendar
+- Use the dashboard calendar widget to create events
+- Set event type: Deadline, Meeting, Event, or Reminder
+- Target events to specific roles or all users
+- Events appear on relevant users' dashboards automatically
+
+### Tips
+- Keep committee meeting dates current in the calendar
+- Use Audit Logs for compliance and governance reporting
+- Export student and request data for stakeholder reports via the dashboard`,
+  },
+  {
+    id: 'getting-started-admin',
+    title: 'Getting Started (Administrators)',
+    icon: <HiOutlineCog6Tooth />,
+    description: 'Quick-start guide for system administrators — user management, analytics, and governance.',
+    roles: ['admin'],
+    content: `## Getting Started as an Administrator
+
+### Your Responsibilities
+- Manage all user accounts and role assignments
+- Monitor system health via analytics and audit logs
+- Maintain HD form templates via the Form Builder
+- Ensure governance, compliance, and data integrity
+- Manage application-wide calendar events and deadlines
+
+### Key Pages for Admins
+- **Dashboard** — system-wide summary with export tools
+- **Role Management** — create, edit, and manage all users
+- **Analytics** — system performance and usage statistics
+- **Audit Logs** — full system activity trail
+- **Form Builder** — create and publish HD request form templates
+- **Settings** — profile, preferences, and security
+
+### User Management
+1. Navigate to **Role Management** from the sidebar
+2. **Create individual users** with the "Create User" button
+3. **Bulk import** cohorts via CSV with "Import CSV"
+4. Users receive auto-generated temporary passwords
+5. Assign roles: Student, Supervisor, Coordinator, Admin, External, Examiner
+6. All role changes are logged in the audit trail
+
+### Form Builder Maintenance
+- Navigate to **Form Builder** to manage HD form templates
+- Create new templates or customise existing ones
+- **Publish** templates to make them live for new requests
+- **Archive** outdated templates to preserve data without accepting new submissions
+- Use **Duplicate** to create variations of existing templates quickly
+
+### System Analytics
+- Navigate to **Analytics** for visual performance dashboards
+- Monitor submission volumes, processing times, and approval rates
+- Identify bottlenecks in the review pipeline
+- Generate reports for faculty and institutional stakeholders
+
+### Governance & Audit
+- **Audit Logs** record every significant system action
+- Filter by user, action type, date range, and resource type
+- Essential for compliance, dispute resolution, and oversight
+
+### Tips
+- Review audit logs regularly for unusual access or error patterns
+- Keep form templates current with academic year changes
+- Use bulk CSV import for cohort onboarding at the start of each year`,
+  },
+  {
+    id: 'submit-documents-guide',
+    title: 'Submitting Documents for Review',
+    icon: <HiOutlineClipboardDocumentList />,
+    description: 'How to submit thesis chapters, proposals, and other academic documents for supervisor feedback.',
+    roles: ['student'],
+    content: `## Submitting Documents for Review
+
+### Overview
+The **My Submissions** page is separate from HD Requests. It handles academic documents — thesis chapters, proposals, literature reviews — that need direct supervisor feedback.
+
+### Accessing My Submissions
+1. Click **"My Submissions"** in the sidebar
+2. Your existing submissions are listed with their current status
+3. Click on any submission to see its full detail and feedback history
+
+### Submitting a New Document
+1. Click **"New Submission"** at the top right
+2. **Select the type** — Draft Chapter, Research Proposal, Literature Review, etc.
+3. **Enter a clear title** that identifies this document
+4. Optionally add a **note** to your supervisor (e.g. "Chapter 3 revised following feedback")
+5. **Upload your file** (PDF or Word)
+6. Click **Submit** — your supervisor is notified immediately
+
+### Submission Types Reference
+| Type | Typical Use |
+|------|-------------|
+| Draft Chapter | Any individual thesis chapter |
+| Research Proposal | Initial or revised research proposal |
+| Literature Review | Standalone review of existing literature |
+| Methodology Chapter | Your research methodology section |
+| Full Thesis | Complete thesis for pre-examination review |
+| Conference Paper | Paper for an academic conference |
+| Progress Report | Written programme progress update |
+| Data Analysis Report | Analysis findings and results |
+| Ethics Application | Ethics committee documentation |
+
+### Submission Statuses
+- **Draft** — saved but not yet submitted
+- **Submitted** — awaiting supervisor review
+- **Under Review** — supervisor is actively reviewing
+- **Feedback Provided** — supervisor has sent annotations or formal feedback
+- **Revision Requested** — changes are required
+- **Approved** — supervisor has approved this version
+
+### Viewing Annotations and Feedback
+- Open the submission and scroll to **Feedback**
+- Ratings, comments, and your supervisor's recommendation are shown
+- For thesis documents: click on highlighted text to read annotated comments
+- Use the annotation sidebar to navigate all comments
+
+### Submitting a Revision
+1. Address the feedback in your document
+2. Open the submission and click **"Upload New Version"**
+3. Attach the revised file and add a note summarising your changes
+4. Your supervisor is notified; previous versions remain accessible as history`,
+  },
 ];
 
 /* ════════════════════════════════════════
@@ -524,12 +824,17 @@ export default function HelpPage() {
     return FAQ_DATA.map(cat => ({
       ...cat,
       items: cat.items.filter(item => {
+        const matchesRole = !item.roles || item.roles.includes(role);
+        if (!matchesRole) return false;
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
         return item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q);
       }),
-    })).filter(cat => cat.items.length > 0);
-  }, [searchQuery]);
+    })).filter(cat => {
+      const catMatchesRole = !cat.roles || cat.roles.includes(role);
+      return catMatchesRole && cat.items.length > 0;
+    });
+  }, [role, searchQuery]);
 
   // Filter guides by role and search
   const filteredGuides = useMemo(() => {

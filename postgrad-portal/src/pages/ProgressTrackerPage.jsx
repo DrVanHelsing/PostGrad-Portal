@@ -259,21 +259,21 @@ export default function ProgressTrackerPage() {
 
       {/* Summary stats strip */}
       <div className="stats-grid" style={{ marginBottom: 'var(--space-lg)' }}>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-success)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-success)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Approved</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-success)' }}>{approved}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-success)' }}>{approved}</div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-warning)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-warning)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>In Progress</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-warning)' }}>{pending}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-warning)' }}>{pending}</div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-danger)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-danger)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Referred Back</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-danger)' }}>{referred}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-danger)' }}>{referred}</div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-purple)', padding: 20 }}>
+        <div className="stat-card" style={{ borderLeft: '4px solid var(--status-purple)', padding: 14 }}>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>Milestones</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--status-purple)' }}>{milestones.length}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--status-purple)' }}>{milestones.length}</div>
         </div>
       </div>
 
