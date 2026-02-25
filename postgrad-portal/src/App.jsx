@@ -2,6 +2,7 @@
 // PostGrad Portal – App Root with Routing
 // ============================================
 
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -139,7 +140,8 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <Analytics>
+      <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <DataProvider>
@@ -150,5 +152,6 @@ export default function App() {
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </Analytics>
   );
 }
