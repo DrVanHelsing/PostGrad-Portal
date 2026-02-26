@@ -140,8 +140,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <Analytics>
-      <BrowserRouter>
+    <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <DataProvider>
@@ -151,7 +150,7 @@ export default function App() {
           </DataProvider>
         </AuthProvider>
       </ThemeProvider>
+      <Analytics />
     </BrowserRouter>
-    </Analytics>
   );
 }
