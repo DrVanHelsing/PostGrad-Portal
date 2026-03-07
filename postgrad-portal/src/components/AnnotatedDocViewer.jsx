@@ -164,10 +164,13 @@ export default function AnnotatedDocViewer({
     if (next) {
       setFocusedAnnotation(annotation.id);
       if (annotation.pageNumber && annotation.pageNumber !== currentPage) {
-        setCurrentPage(annotation.pageNumber);
+        const safePage = numPages
+          ? Math.min(Math.max(1, annotation.pageNumber), numPages)
+          : annotation.pageNumber;
+        setCurrentPage(safePage);
       }
     }
-  }, [activeAnnotation, currentPage]);
+  }, [activeAnnotation, currentPage, numPages]);
 
   useEffect(() => {
     if (!focusedAnnotation) return;
@@ -660,6 +663,7 @@ export default function AnnotatedDocViewer({
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
                     onRenderTextLayerSuccess={() => setTextLayerRendered(c => c + 1)}
+                    onRenderError={(err) => console.warn('[AnnotatedDocViewer] Page render error (page', currentPage, '):', err?.message)}
                   />
                 </Document>
               ) : null}
