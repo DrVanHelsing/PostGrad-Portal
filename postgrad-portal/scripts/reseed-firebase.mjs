@@ -584,16 +584,545 @@ const AUDIT_LOGS = [
 ];
 
 // ══════════════════════════════════════════════════════════════
+// THESIS SUBMISSIONS
+// ══════════════════════════════════════════════════════════════
+const THESIS_SUBMISSIONS = [
+  {
+    id: 'thesis-001',
+    studentId: 'student-001', studentName: 'Thabo Molefe',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Machine Learning Applications in Healthcare Diagnostics: A South African Perspective',
+    submissionType: 'draft_chapter',
+    chapterTitle: 'Chapter 3 – Methodology',
+    status: 'feedback_provided',
+    createdAt: ts('2026-01-20'), updatedAt: ts('2026-02-05'),
+    currentVersion: 2,
+    documents: [
+      { name: 'Chapter3_Methodology_v2.pdf', size: '1.2 MB', uploadedAt: ts('2026-02-01'), path: '/documents/hdr-002/Progress_Report_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-001', version: 1, status: 'changes_requested',
+        uploadedAt: ts('2026-01-20'), uploadedBy: 'student-001',
+        documents: [{ name: 'Chapter3_Methodology_v1.pdf', size: '980 KB', path: '/documents/hdr-003/Extension_Motivation_Letter.pdf' }],
+        changeNotes: 'Initial draft of methodology chapter covering research design, data collection, and analysis framework.',
+        feedback: [
+          {
+            id: 'fb-001', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor',
+            recommendation: 'changes_requested', date: ts('2026-01-25'),
+            criteria: { research_quality: 4, academic_writing: 3, methodology: 3, completeness: 3, formatting: 4 },
+            comments: 'Good overall structure but the sampling methodology needs more rigorous justification. Please expand the ethics considerations section and add details about data preprocessing steps.',
+          },
+        ],
+        comments: [
+          { id: 'tc-001', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'Section 3.2 needs stronger justification for the choice of CNN architecture over traditional ML approaches.', date: ts('2026-01-25') },
+          { id: 'tc-002', authorId: 'student-001', authorName: 'Thabo Molefe', authorRole: 'student', text: 'Thank you, I will add a comparative analysis section to justify the architectural choice.', date: ts('2026-01-26'), replyTo: 'tc-001' },
+        ],
+      },
+      {
+        id: 'tv-002', version: 2, status: 'under_review',
+        uploadedAt: ts('2026-02-01'), uploadedBy: 'student-001',
+        documents: [{ name: 'Chapter3_Methodology_v2.pdf', size: '1.2 MB', path: '/documents/hdr-002/Progress_Report_2025.pdf' }],
+        changeNotes: 'Revised methodology with expanded ethics section, added CNN architecture justification, and improved data preprocessing description.',
+        feedback: [],
+        comments: [
+          { id: 'tc-003', authorId: 'student-001', authorName: 'Thabo Molefe', authorRole: 'student', text: 'I have addressed all the feedback. Added Section 3.2.1 for architecture comparison and expanded Section 3.4 on ethics.', date: ts('2026-02-01') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-001', versionId: 'tv-001', documentName: 'Chapter3_Methodology_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 5, selectedText: 'convenience sampling approach', comment: 'This needs to be changed to stratified sampling to ensure representativeness across hospital types.', color: 'yellow', status: 'resolved', createdAt: ts('2026-01-25') },
+      { id: 'ann-002', versionId: 'tv-001', documentName: 'Chapter3_Methodology_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 8, selectedText: 'ethical approval is pending', comment: 'Update this to reflect the approved ethics number (HS-2025-0847).', color: 'green', status: 'resolved', createdAt: ts('2026-01-25') },
+      { id: 'ann-003', versionId: 'tv-002', documentName: 'Chapter3_Methodology_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'deep learning architectures', comment: 'Consider citing the recent survey by Chen et al. (2025) here.', color: 'blue', status: 'active', createdAt: ts('2026-02-03') },
+    ],
+    rating: { overall: 3.5, criteria: { research_quality: 4, academic_writing: 3, methodology: 3, completeness: 3, formatting: 4 } },
+  },
+  {
+    id: 'thesis-002',
+    studentId: 'student-001', studentName: 'Thabo Molefe',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Machine Learning Applications in Healthcare Diagnostics: A South African Perspective',
+    submissionType: 'draft_chapter',
+    chapterTitle: 'Chapter 2 – Literature Review',
+    status: 'approved',
+    createdAt: ts('2025-09-15'), updatedAt: ts('2025-11-10'),
+    currentVersion: 3,
+    documents: [
+      { name: 'Chapter2_LitReview_v3.pdf', size: '2.1 MB', uploadedAt: ts('2025-11-01'), path: '/documents/hdr-002/Publication_Evidence.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-003', version: 1, status: 'superseded',
+        uploadedAt: ts('2025-09-15'), uploadedBy: 'student-001',
+        documents: [{ name: 'Chapter2_LitReview_v1.pdf', size: '1.4 MB', path: '/documents/hdr-011/Title_Registration_Form.pdf' }],
+        changeNotes: 'First draft covering 87 papers.',
+        feedback: [{ id: 'fb-002', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-09-25'), criteria: { research_quality: 3, academic_writing: 3, methodology: 3, completeness: 2, formatting: 3 }, comments: 'Need to include more recent papers from 2024-2025. The thematic organization is good but coverage of African context is insufficient.' }],
+        comments: [],
+      },
+      {
+        id: 'tv-004', version: 2, status: 'superseded',
+        uploadedAt: ts('2025-10-10'), uploadedBy: 'student-001',
+        documents: [{ name: 'Chapter2_LitReview_v2.pdf', size: '1.8 MB', path: '/documents/hdr-007/Progress_Report_NK_2025.pdf' }],
+        changeNotes: 'Added 40 more papers, expanded African context section.',
+        feedback: [{ id: 'fb-003', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-10-20'), criteria: { research_quality: 4, academic_writing: 3, methodology: 4, completeness: 4, formatting: 3 }, comments: 'Much improved. Fix formatting inconsistencies in reference list and improve the synthesis paragraph at the end of each section.' }],
+        comments: [],
+      },
+      {
+        id: 'tv-005', version: 3, status: 'approved',
+        uploadedAt: ts('2025-11-01'), uploadedBy: 'student-001',
+        documents: [{ name: 'Chapter2_LitReview_v3.pdf', size: '2.1 MB', path: '/documents/hdr-002/Publication_Evidence.pdf' }],
+        changeNotes: 'Final version with formatted references and synthesis paragraphs.',
+        feedback: [{ id: 'fb-004', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-11-10'), criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 }, comments: 'Excellent literature review. Ready for inclusion in the thesis.' }],
+        comments: [
+          { id: 'tc-004', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'This chapter is now at a very high standard. Well done!', date: ts('2025-11-10') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-009', versionId: 'tv-003', documentName: 'Chapter2_LitReview_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'systematic review methodology', comment: 'Clarify whether you followed PRISMA or another systematic review framework.', color: 'yellow', status: 'resolved', createdAt: ts('2025-09-22') },
+      { id: 'ann-010', versionId: 'tv-004', documentName: 'Chapter2_LitReview_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 15, selectedText: 'limited African research context', comment: 'Good improvement — the new African case studies strengthen this section significantly.', color: 'green', status: 'resolved', createdAt: ts('2025-10-18') },
+    ],
+    rating: { overall: 4.6, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 } },
+  },
+  {
+    id: 'thesis-003',
+    studentId: 'student-002', studentName: 'Naledi Khumalo',
+    supervisorId: 'supervisor-002', coSupervisorId: 'supervisor-001',
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Predictive Analytics for Urban Planning in South African Municipalities',
+    submissionType: 'full_thesis',
+    chapterTitle: null,
+    status: 'under_review',
+    createdAt: ts('2026-02-01'), updatedAt: ts('2026-02-12'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Khumalo_MSc_Thesis_Full_v1.pdf', size: '8.4 MB', uploadedAt: ts('2026-02-01'), path: '/documents/hdr-005/Progress_Report_2025_Dlamini.pdf' },
+      { name: 'Turnitin_Report_Khumalo.pdf', size: '340 KB', uploadedAt: ts('2026-02-01'), path: '/documents/hdr-006/Turnitin_Report.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-006', version: 1, status: 'under_review',
+        uploadedAt: ts('2026-02-01'), uploadedBy: 'student-002',
+        documents: [
+          { name: 'Khumalo_MSc_Thesis_Full_v1.pdf', size: '8.4 MB', path: '/documents/hdr-005/Progress_Report_2025_Dlamini.pdf' },
+          { name: 'Turnitin_Report_Khumalo.pdf', size: '340 KB', path: '/documents/hdr-006/Turnitin_Report.pdf' },
+        ],
+        changeNotes: 'Complete thesis submission for supervisor review. Turnitin similarity: 12%.',
+        feedback: [],
+        comments: [
+          { id: 'tc-005', authorId: 'student-002', authorName: 'Naledi Khumalo', authorRole: 'student', text: 'Submitting full thesis for first review. All chapters have been previously reviewed individually.', date: ts('2026-02-01') },
+          { id: 'tc-006', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', text: 'Thank you, Naledi. I will begin the full review this week.', date: ts('2026-02-03') },
+          { id: 'tc-007', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'I will also review the methodology and results chapters from a co-supervisor perspective.', date: ts('2026-02-04') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-004', versionId: 'tv-006', documentName: 'Khumalo_MSc_Thesis_Full_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 12, selectedText: 'urban growth prediction model', comment: 'Consider adding a comparison with the Cellular Automata approach used by Verburg et al.', color: 'yellow', status: 'active', createdAt: ts('2026-02-08') },
+      { id: 'ann-005', versionId: 'tv-006', documentName: 'Khumalo_MSc_Thesis_Full_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 45, selectedText: 'random forest regression', comment: 'The feature importance analysis should be presented as a separate table rather than inline text.', color: 'pink', status: 'active', createdAt: ts('2026-02-10') },
+    ],
+    rating: null,
+  },
+  {
+    id: 'thesis-004',
+    studentId: 'student-002', studentName: 'Naledi Khumalo',
+    supervisorId: 'supervisor-002', coSupervisorId: 'supervisor-001',
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Predictive Analytics for Urban Planning in South African Municipalities',
+    submissionType: 'draft_chapter',
+    chapterTitle: 'Chapter 4 – Results and Discussion',
+    status: 'approved',
+    createdAt: ts('2025-12-01'), updatedAt: ts('2026-01-15'),
+    currentVersion: 2,
+    documents: [
+      { name: 'Chapter4_Results_v2.pdf', size: '3.2 MB', uploadedAt: ts('2026-01-05'), path: '/documents/hdr-004/Data_Collection_Protocol.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-007', version: 1, status: 'superseded',
+        uploadedAt: ts('2025-12-01'), uploadedBy: 'student-002',
+        documents: [{ name: 'Chapter4_Results_v1.pdf', size: '2.8 MB', path: '/documents/hdr-004/Ethics_Application_v1.pdf' }],
+        changeNotes: 'First draft with preliminary results from 3 municipalities.',
+        feedback: [{ id: 'fb-005', reviewerId: 'supervisor-002', reviewerName: 'Dr. James Nkosi', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-12-15'), criteria: { research_quality: 4, academic_writing: 4, methodology: 3, completeness: 3, formatting: 4 }, comments: 'Results are promising but the discussion section needs to connect findings more strongly to the literature. Add confidence intervals to all predictions.' }],
+        comments: [],
+      },
+      {
+        id: 'tv-008', version: 2, status: 'approved',
+        uploadedAt: ts('2026-01-05'), uploadedBy: 'student-002',
+        documents: [{ name: 'Chapter4_Results_v2.pdf', size: '3.2 MB', path: '/documents/hdr-004/Data_Collection_Protocol.pdf' }],
+        changeNotes: 'Added confidence intervals, strengthened discussion, included all 5 municipalities.',
+        feedback: [{ id: 'fb-006', reviewerId: 'supervisor-002', reviewerName: 'Dr. James Nkosi', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2026-01-15'), criteria: { research_quality: 5, academic_writing: 5, methodology: 4, completeness: 5, formatting: 5 }, comments: 'Excellent chapter. The discussion is now well-grounded in the literature.' }],
+        comments: [
+          { id: 'tc-008', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', text: 'This is ready. Strong work, Naledi.', date: ts('2026-01-15') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-011', versionId: 'tv-007', documentName: 'Chapter4_Results_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 7, selectedText: 'confidence interval of 95%', comment: 'Add confidence intervals to ALL prediction tables, not just Table 4.1.', color: 'yellow', status: 'resolved', createdAt: ts('2025-12-12') },
+      { id: 'ann-012', versionId: 'tv-007', documentName: 'Chapter4_Results_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 14, selectedText: 'discussion of findings', comment: 'Connect these findings back to the theoretical framework in Chapter 2.', color: 'pink', status: 'resolved', createdAt: ts('2025-12-13') },
+    ],
+    rating: { overall: 4.8, criteria: { research_quality: 5, academic_writing: 5, methodology: 4, completeness: 5, formatting: 5 } },
+  },
+  {
+    id: 'thesis-005',
+    studentId: 'student-001', studentName: 'Thabo Molefe',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Machine Learning Applications in Healthcare Diagnostics: A South African Perspective',
+    submissionType: 'research_proposal',
+    chapterTitle: 'Research Proposal – ML in SA Healthcare',
+    status: 'approved',
+    createdAt: ts('2025-05-10'), updatedAt: ts('2025-06-20'),
+    currentVersion: 2,
+    documents: [
+      { name: 'Research_Proposal_Molefe_v2.pdf', size: '1.5 MB', uploadedAt: ts('2025-06-15'), path: '/documents/hdr-001/Title_Registration_Form.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-009', version: 1, status: 'superseded',
+        uploadedAt: ts('2025-05-10'), uploadedBy: 'student-001',
+        documents: [{ name: 'Research_Proposal_Molefe_v1.pdf', size: '1.1 MB', path: '/documents/hdr-001/Title_Registration_Form.pdf' }],
+        changeNotes: 'Initial research proposal submission.',
+        feedback: [{ id: 'fb-007', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-05-25'), criteria: { research_quality: 4, academic_writing: 3, methodology: 3, completeness: 3, formatting: 4 }, comments: 'Solid research questions but the scope is too broad. Narrow down to 2-3 specific diagnostic areas. Budget section is incomplete.' }],
+        comments: [],
+      },
+      {
+        id: 'tv-010', version: 2, status: 'approved',
+        uploadedAt: ts('2025-06-15'), uploadedBy: 'student-001',
+        documents: [{ name: 'Research_Proposal_Molefe_v2.pdf', size: '1.5 MB', path: '/documents/hdr-001/Title_Registration_Form.pdf' }],
+        changeNotes: 'Narrowed scope to tuberculosis and diabetic retinopathy diagnostics. Added budget breakdown.',
+        feedback: [{ id: 'fb-008', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-06-20'), criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 4, formatting: 4 }, comments: 'Well-focused proposal. Approved for submission to faculty committee.' }],
+        comments: [
+          { id: 'tc-009', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'Excellent revision, Thabo. The narrowed scope will allow for more depth.', date: ts('2025-06-20') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-013', versionId: 'tv-009', documentName: 'Research_Proposal_Molefe_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 2, selectedText: 'broad scope of machine learning', comment: 'The scope is too broad. Narrow down to 2-3 specific diagnostic areas for feasibility.', color: 'yellow', status: 'resolved', createdAt: ts('2025-05-22') },
+      { id: 'ann-014', versionId: 'tv-009', documentName: 'Research_Proposal_Molefe_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 6, selectedText: 'budget allocation', comment: 'Budget section is incomplete. Please add estimated costs for data collection, computing resources, and travel.', color: 'red', status: 'resolved', createdAt: ts('2025-05-23') },
+      { id: 'ann-015', versionId: 'tv-010', documentName: 'Research_Proposal_Molefe_v2.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 4, selectedText: 'tuberculosis and diabetic retinopathy', comment: 'Good focus areas. This is much more feasible now.', color: 'green', status: 'resolved', createdAt: ts('2025-06-18') },
+    ],
+    rating: { overall: 4.4, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 4, formatting: 4 } },
+  },
+  {
+    id: 'thesis-006',
+    studentId: 'student-001', studentName: 'Thabo Molefe',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Machine Learning Applications in Healthcare Diagnostics: A South African Perspective',
+    submissionType: 'ethics_application',
+    chapterTitle: 'Ethics Application – Human Subjects Research',
+    status: 'approved',
+    createdAt: ts('2025-07-01'), updatedAt: ts('2025-07-28'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Ethics_Application_Molefe.pdf', size: '890 KB', uploadedAt: ts('2025-07-01'), path: '/documents/hdr-004/Ethics_Application_v1.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-011', version: 1, status: 'approved',
+        uploadedAt: ts('2025-07-01'), uploadedBy: 'student-001',
+        documents: [{ name: 'Ethics_Application_Molefe.pdf', size: '890 KB', path: '/documents/hdr-004/Ethics_Application_v1.pdf' }],
+        changeNotes: 'Ethics application for clinical data collection at Tygerberg Hospital.',
+        feedback: [{ id: 'fb-009', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-07-28'), criteria: { research_quality: 4, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 }, comments: 'Comprehensive ethics application. Consent forms are well designed. Ready for committee submission.' }],
+        comments: [],
+      },
+    ],
+    annotations: [],
+    rating: { overall: 4.4, criteria: { research_quality: 4, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 } },
+  },
+  {
+    id: 'thesis-007',
+    studentId: 'student-002', studentName: 'Naledi Khumalo',
+    supervisorId: 'supervisor-002', coSupervisorId: 'supervisor-001',
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Predictive Analytics for Urban Planning in South African Municipalities',
+    submissionType: 'literature_review',
+    chapterTitle: 'Systematic Literature Review – Urban Analytics Models',
+    status: 'approved',
+    createdAt: ts('2025-08-01'), updatedAt: ts('2025-09-20'),
+    currentVersion: 2,
+    documents: [
+      { name: 'SLR_UrbanAnalytics_Khumalo_v2.pdf', size: '2.3 MB', uploadedAt: ts('2025-09-10'), path: '/documents/hdr-007/Progress_Report_NK_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-012', version: 1, status: 'superseded',
+        uploadedAt: ts('2025-08-01'), uploadedBy: 'student-002',
+        documents: [{ name: 'SLR_UrbanAnalytics_Khumalo_v1.pdf', size: '1.9 MB', path: '/documents/hdr-007/Progress_Report_NK_2025.pdf' }],
+        changeNotes: 'First draft of systematic literature review covering 120 papers on urban analytics models.',
+        feedback: [{ id: 'fb-010', reviewerId: 'supervisor-002', reviewerName: 'Dr. James Nkosi', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-08-20'), criteria: { research_quality: 4, academic_writing: 3, methodology: 4, completeness: 3, formatting: 3 }, comments: 'Good coverage but missing African case studies. Please also improve the PRISMA flow diagram and add keyword co-occurrence analysis.' }],
+        comments: [],
+      },
+      {
+        id: 'tv-013', version: 2, status: 'approved',
+        uploadedAt: ts('2025-09-10'), uploadedBy: 'student-002',
+        documents: [{ name: 'SLR_UrbanAnalytics_Khumalo_v2.pdf', size: '2.3 MB', path: '/documents/hdr-007/Progress_Report_NK_2025.pdf' }],
+        changeNotes: 'Added 25 African case studies, improved PRISMA diagram, added bibliometric analysis.',
+        feedback: [{ id: 'fb-011', reviewerId: 'supervisor-002', reviewerName: 'Dr. James Nkosi', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-09-20'), criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 }, comments: 'Excellent systematic review. Ready for thesis inclusion.' }],
+        comments: [
+          { id: 'tc-010', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', text: 'Great improvement. Consider publishing this as a standalone review paper.', date: ts('2025-09-20') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-016', versionId: 'tv-012', documentName: 'SLR_UrbanAnalytics_Khumalo_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 8, selectedText: 'search string construction', comment: 'Add the keyword co-occurrence analysis to validate your search strategy.', color: 'yellow', status: 'resolved', createdAt: ts('2025-08-18') },
+      { id: 'ann-017', versionId: 'tv-012', documentName: 'SLR_UrbanAnalytics_Khumalo_v1.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 11, selectedText: 'no African case studies were found', comment: 'There are several African case studies — check Amoako (2022) and Odendaal (2021).', color: 'red', status: 'resolved', createdAt: ts('2025-08-19') },
+      { id: 'ann-018', versionId: 'tv-013', documentName: 'SLR_UrbanAnalytics_Khumalo_v2.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 5, selectedText: 'PRISMA flow diagram', comment: 'Much improved PRISMA diagram. Ready for thesis.', color: 'green', status: 'resolved', createdAt: ts('2025-09-18') },
+    ],
+    rating: { overall: 4.6, criteria: { research_quality: 5, academic_writing: 4, methodology: 5, completeness: 5, formatting: 4 } },
+  },
+  {
+    id: 'thesis-008',
+    studentId: 'student-002', studentName: 'Naledi Khumalo',
+    supervisorId: 'supervisor-002', coSupervisorId: 'supervisor-001',
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Predictive Analytics for Urban Planning in South African Municipalities',
+    submissionType: 'conference_paper',
+    chapterTitle: 'Conference Paper – SAICSIT 2026',
+    status: 'feedback_provided',
+    createdAt: ts('2026-01-25'), updatedAt: ts('2026-02-10'),
+    currentVersion: 1,
+    documents: [
+      { name: 'SAICSIT_2026_Khumalo_Draft.pdf', size: '720 KB', uploadedAt: ts('2026-01-25'), path: '/documents/hdr-005/Progress_Report_2025_Dlamini.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-014', version: 1, status: 'changes_requested',
+        uploadedAt: ts('2026-01-25'), uploadedBy: 'student-002',
+        documents: [{ name: 'SAICSIT_2026_Khumalo_Draft.pdf', size: '720 KB', path: '/documents/hdr-005/Progress_Report_2025_Dlamini.pdf' }],
+        changeNotes: 'Draft conference paper for SAICSIT 2026. Submission deadline: March 15.',
+        feedback: [{ id: 'fb-012', reviewerId: 'supervisor-002', reviewerName: 'Dr. James Nkosi', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2026-02-10'), criteria: { research_quality: 4, academic_writing: 3, methodology: 4, completeness: 3, formatting: 3 }, comments: 'Paper is too long for conference format. Reduce to 8 pages max. Condense the results section and move detailed tables to appendix.' }],
+        comments: [
+          { id: 'tc-011', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', text: 'Also check the IEEE format requirements — the margins look off.', date: ts('2026-02-10') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-006', versionId: 'tv-014', documentName: 'SAICSIT_2026_Khumalo_Draft.pdf', authorId: 'supervisor-002', authorName: 'Dr. James Nkosi', authorRole: 'supervisor', page: 2, selectedText: 'our novel approach', comment: 'Avoid using "novel" — let the reviewers decide if it\'s novel. Use "proposed" instead.', color: 'yellow', status: 'active', createdAt: ts('2026-02-10') },
+    ],
+    rating: { overall: 3.4, criteria: { research_quality: 4, academic_writing: 3, methodology: 4, completeness: 3, formatting: 3 } },
+  },
+  {
+    id: 'thesis-009',
+    studentId: 'student-003', studentName: 'Sipho Dlamini',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Blockchain-Based Academic Credential Verification Systems',
+    submissionType: 'research_proposal',
+    chapterTitle: 'Research Proposal – Blockchain Credentials',
+    status: 'approved',
+    createdAt: ts('2025-06-01'), updatedAt: ts('2025-07-10'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Research_Proposal_Dlamini.pdf', size: '1.2 MB', uploadedAt: ts('2025-06-01'), path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-015', version: 1, status: 'approved',
+        uploadedAt: ts('2025-06-01'), uploadedBy: 'student-003',
+        documents: [{ name: 'Research_Proposal_Dlamini.pdf', size: '1.2 MB', path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' }],
+        changeNotes: 'Research proposal for MSc Information Systems thesis on blockchain credential verification.',
+        feedback: [{ id: 'fb-013', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-07-10'), criteria: { research_quality: 4, academic_writing: 4, methodology: 4, completeness: 4, formatting: 4 }, comments: 'Well-structured proposal with clear research questions and feasible methodology. Approved.' }],
+        comments: [
+          { id: 'tc-012', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'Good start, Sipho. Consider connecting with the university\'s ICT department for potential implementation partnership.', date: ts('2025-07-10') },
+        ],
+      },
+    ],
+    annotations: [],
+    rating: { overall: 4.0, criteria: { research_quality: 4, academic_writing: 4, methodology: 4, completeness: 4, formatting: 4 } },
+  },
+  {
+    id: 'thesis-010',
+    studentId: 'student-003', studentName: 'Sipho Dlamini',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Blockchain-Based Academic Credential Verification Systems',
+    submissionType: 'draft_chapter',
+    chapterTitle: 'Chapter 2 – Literature Review',
+    status: 'feedback_provided',
+    createdAt: ts('2025-11-01'), updatedAt: ts('2025-12-15'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Chapter2_LitReview_Dlamini_v1.pdf', size: '1.6 MB', uploadedAt: ts('2025-11-01'), path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-016', version: 1, status: 'changes_requested',
+        uploadedAt: ts('2025-11-01'), uploadedBy: 'student-003',
+        documents: [{ name: 'Chapter2_LitReview_Dlamini_v1.pdf', size: '1.6 MB', path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' }],
+        changeNotes: 'First draft covering blockchain fundamentals, credential verification, and South African higher education context.',
+        feedback: [{ id: 'fb-014', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'changes_requested', date: ts('2025-12-15'), criteria: { research_quality: 3, academic_writing: 3, methodology: 3, completeness: 3, formatting: 3 }, comments: 'Decent start but too much focus on blockchain technology basics. Assume the reader has fundamental knowledge. Expand the section on existing credential verification systems in South African universities.' }],
+        comments: [
+          { id: 'tc-013', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', text: 'Also, look at the SAQA framework for qualification verification — this is essential context.', date: ts('2025-12-15') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-007', versionId: 'tv-016', documentName: 'Chapter2_LitReview_Dlamini_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 4, selectedText: 'blockchain is a distributed ledger', comment: 'This paragraph reads like a tutorial. Cut it down — your readers will be academics familiar with the basics.', color: 'yellow', status: 'active', createdAt: ts('2025-12-15') },
+      { id: 'ann-008', versionId: 'tv-016', documentName: 'Chapter2_LitReview_Dlamini_v1.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 12, selectedText: 'no existing South African studies', comment: 'This is incorrect. See Ngwenya (2023) and van Zyl (2024) for SA-specific work in this area.', color: 'red', status: 'active', createdAt: ts('2025-12-15') },
+    ],
+    rating: { overall: 3.0, criteria: { research_quality: 3, academic_writing: 3, methodology: 3, completeness: 3, formatting: 3 } },
+  },
+  {
+    id: 'thesis-011',
+    studentId: 'student-003', studentName: 'Sipho Dlamini',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Blockchain-Based Academic Credential Verification Systems',
+    submissionType: 'methodology',
+    chapterTitle: 'Chapter 3 – Design Science Methodology',
+    status: 'submitted',
+    createdAt: ts('2026-02-08'), updatedAt: ts('2026-02-08'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Chapter3_Methodology_Dlamini.pdf', size: '1.1 MB', uploadedAt: ts('2026-02-08'), path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-017', version: 1, status: 'submitted',
+        uploadedAt: ts('2026-02-08'), uploadedBy: 'student-003',
+        documents: [{ name: 'Chapter3_Methodology_Dlamini.pdf', size: '1.1 MB', path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' }],
+        changeNotes: 'Methodology chapter using Design Science Research approach with Hevner\'s framework.',
+        feedback: [],
+        comments: [
+          { id: 'tc-014', authorId: 'student-003', authorName: 'Sipho Dlamini', authorRole: 'student', text: 'Prof, I\'ve used the Design Science Research methodology as we discussed. Please review when you have a chance.', date: ts('2026-02-08') },
+        ],
+      },
+    ],
+    annotations: [],
+    rating: null,
+  },
+  {
+    id: 'thesis-012',
+    studentId: 'student-003', studentName: 'Sipho Dlamini',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Blockchain-Based Academic Credential Verification Systems',
+    submissionType: 'progress_report_doc',
+    chapterTitle: 'Progress Report – Q4 2025',
+    status: 'approved',
+    createdAt: ts('2025-10-01'), updatedAt: ts('2025-10-20'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Progress_Report_Q4_Dlamini.pdf', size: '580 KB', uploadedAt: ts('2025-10-01'), path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-018', version: 1, status: 'approved',
+        uploadedAt: ts('2025-10-01'), uploadedBy: 'student-003',
+        documents: [{ name: 'Progress_Report_Q4_Dlamini.pdf', size: '580 KB', path: '/documents/hdr-009/Progress_Report_SD_2025.pdf' }],
+        changeNotes: 'Quarterly progress report detailing research milestones achieved and next steps.',
+        feedback: [{ id: 'fb-015', reviewerId: 'supervisor-001', reviewerName: 'Prof. Sarah van der Berg', reviewerRole: 'supervisor', recommendation: 'approve', date: ts('2025-10-20'), criteria: { research_quality: 4, academic_writing: 4, methodology: 4, completeness: 4, formatting: 4 }, comments: 'Good progress. On track with the project timeline.' }],
+        comments: [],
+      },
+    ],
+    annotations: [],
+    rating: { overall: 4.0, criteria: { research_quality: 4, academic_writing: 4, methodology: 4, completeness: 4, formatting: 4 } },
+  },
+  {
+    id: 'thesis-013',
+    studentId: 'student-001', studentName: 'Thabo Molefe',
+    supervisorId: 'supervisor-001', coSupervisorId: null,
+    coordinatorId: 'coordinator-001',
+    thesisTitle: 'Machine Learning Applications in Healthcare Diagnostics: A South African Perspective',
+    submissionType: 'data_analysis',
+    chapterTitle: 'Data Analysis Report – TB Chest X-ray Dataset',
+    status: 'submitted',
+    createdAt: ts('2026-02-10'), updatedAt: ts('2026-02-10'),
+    currentVersion: 1,
+    documents: [
+      { name: 'Data_Analysis_Report_TB_Molefe.pdf', size: '4.2 MB', uploadedAt: ts('2026-02-10'), path: '/documents/hdr-002/Progress_Report_2025.pdf' },
+      { name: 'Statistical_Appendix_Molefe.pdf', size: '1.1 MB', uploadedAt: ts('2026-02-10'), path: '/documents/hdr-002/Publication_Evidence.pdf' },
+    ],
+    versions: [
+      {
+        id: 'tv-019', version: 1, status: 'submitted',
+        uploadedAt: ts('2026-02-10'), uploadedBy: 'student-001',
+        documents: [
+          { name: 'Data_Analysis_Report_TB_Molefe.pdf', size: '4.2 MB', path: '/documents/hdr-002/Progress_Report_2025.pdf' },
+          { name: 'Statistical_Appendix_Molefe.pdf', size: '1.1 MB', path: '/documents/hdr-002/Publication_Evidence.pdf' },
+        ],
+        changeNotes: 'Complete data analysis report from TB X-ray classification dataset. Includes confusion matrices, ROC curves, and feature importance analysis.',
+        feedback: [],
+        comments: [
+          { id: 'tc-015', authorId: 'student-001', authorName: 'Thabo Molefe', authorRole: 'student', text: 'Prof, the model achieved 94.2% accuracy on the test set. The full statistical appendix is also attached.', date: ts('2026-02-10') },
+        ],
+      },
+    ],
+    annotations: [
+      { id: 'ann-019', versionId: 'tv-019', documentName: 'Data_Analysis_Report_TB_Molefe.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 3, selectedText: 'classification accuracy of 94.2%', comment: 'Impressive results. Please also report sensitivity and specificity for the TB class specifically.', color: 'blue', status: 'active', createdAt: ts('2026-02-12') },
+      { id: 'ann-020', versionId: 'tv-019', documentName: 'Statistical_Appendix_Molefe.pdf', authorId: 'supervisor-001', authorName: 'Prof. Sarah van der Berg', authorRole: 'supervisor', page: 1, selectedText: 'confusion matrix', comment: 'Label the axes more clearly — include class names not just numbers.', color: 'yellow', status: 'active', createdAt: ts('2026-02-12') },
+    ],
+    rating: null,
+  },
+];
+
+/* ── Color name → hex mapping ── */
+const COLOR_MAP = {
+  yellow: '#ffd43b', green: '#69db7c', blue: '#74c0fc',
+  red: '#ffa8a8', pink: '#ffc9c9', orange: '#ffa94d',
+};
+function mapColor(c) {
+  if (!c) return '#ffd43b';
+  if (c.startsWith('#')) return c;
+  return COLOR_MAP[c.toLowerCase()] || '#ffd43b';
+}
+
+/**
+ * Extract embedded annotations from thesis submissions and convert them into
+ * proper annotation documents for the separate 'annotations' Firestore collection.
+ */
+function extractAnnotations(submissions) {
+  const results = [];
+  for (const sub of submissions) {
+    if (!Array.isArray(sub.annotations) || sub.annotations.length === 0) continue;
+    const versionDocMap = {};
+    for (const v of (sub.versions || [])) {
+      const docs = v.documents || [];
+      if (docs.length > 0) versionDocMap[v.id] = docs[0].name;
+    }
+    for (const ann of sub.annotations) {
+      const documentName = versionDocMap[ann.versionId] || (sub.documents?.[0]?.name) || 'unknown.pdf';
+      results.push({
+        id: ann.id,
+        versionId: ann.versionId,
+        requestId: sub.id,
+        documentName,
+        selectedText: ann.selectedText || '',
+        comment: ann.comment || '',
+        pageNumber: ann.page || ann.pageNumber || 1,
+        authorId: ann.authorId,
+        authorName: ann.authorName,
+        authorRole: ann.authorRole,
+        highlightColor: mapColor(ann.color || ann.highlightColor),
+        status: ann.status || 'active',
+        resolved: ann.status === 'resolved' || ann.resolved === true,
+        replies: ann.replies || [],
+        createdAt: ann.createdAt || ts('2026-01-01'),
+        updatedAt: ann.updatedAt || ann.createdAt || ts('2026-01-01'),
+      });
+    }
+  }
+  return results;
+}
+
+const ANNOTATIONS = extractAnnotations(THESIS_SUBMISSIONS);
+
+// ══════════════════════════════════════════════════════════════
 // COLLECTION MAP
 // ══════════════════════════════════════════════════════════════
 const ALL_COLLECTIONS = {
-  users:           USERS,
-  hdRequests:      HD_REQUESTS,
-  calendarEvents:  CALENDAR_EVENTS,
-  milestones:      MILESTONES,
-  notifications:   NOTIFICATIONS,
-  studentProfiles: STUDENT_PROFILES,
-  auditLogs:       AUDIT_LOGS,
+  users:             USERS,
+  hdRequests:        HD_REQUESTS,
+  calendarEvents:    CALENDAR_EVENTS,
+  milestones:        MILESTONES,
+  notifications:     NOTIFICATIONS,
+  studentProfiles:   STUDENT_PROFILES,
+  auditLogs:         AUDIT_LOGS,
+  thesisSubmissions: THESIS_SUBMISSIONS,
+  annotations:       ANNOTATIONS,
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -653,9 +1182,7 @@ async function main() {
     await signInWithEmailAndPassword(auth, 'admin@uwc.ac.za', 'Portal@2026');
     console.log('  ✓ Signed in as admin@uwc.ac.za\n');
   } catch (err) {
-    console.error('  ✗ Auth failed:', err.message);
-    console.error('  Make sure auth users exist. Run: node scripts/seed-firebase.mjs first.\n');
-    process.exit(1);
+    console.warn(`  ⚠ Auth skipped (${err.code || err.message}) — continuing with dev fallback rules\n`);
   }
 
   // Step 1: Delete all existing data
